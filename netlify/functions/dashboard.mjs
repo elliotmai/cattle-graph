@@ -136,99 +136,228 @@ export function renderHtml(s) {
 
   const cards = s.boards.map((b) => `
     <article class="card${b.stale ? ' stale' : ''}">
-      <header>
+      <header class="card-head">
         <h2>${esc(b.association)}</h2>
         <span class="pill ${b.stale ? 'bad' : 'good'}">${b.stale ? 'stalled' : esc(b.state ?? 'running')}</span>
       </header>
-      <div class="bar"><span style="width:${Math.min(100, Number(b.pct) || 0)}%"></span></div>
-      <p class="pct">${(Number(b.pct) || 0).toFixed(1)}%</p>
-      <dl>
-        <div><dt>done</dt><dd>${num(b.done)}</dd></div>
-        <div><dt>pending</dt><dd>${num(b.pending)}</dd></div>
-        <div><dt>rate</dt><dd>${esc(b.rate_per_min ?? 0)}/min</dd></div>
-        <div><dt>eta</dt><dd>${b.etaDays !== null ? `${b.etaDays}d` : '&mdash;'}</dd></div>
-        ${Number(b.failed) ? `<div><dt>failed</dt><dd class="warn">${num(b.failed)}</dd></div>` : ''}
+
+      <div class="bar" role="img" aria-label="${(Number(b.pct) || 0).toFixed(1)} percent complete">
+        <span style="width:${Math.min(100, Number(b.pct) || 0)}%"></span>
+      </div>
+      <p class="pct"><b>${(Number(b.pct) || 0).toFixed(1)}%</b> of known herd</p>
+
+      <dl class="figures">
+        <div><dt>Recorded</dt><dd>${num(b.done)}</dd></div>
+        <div><dt>Remaining</dt><dd>${num(b.pending)}</dd></div>
+        <div><dt>Rate</dt><dd>${esc(b.rate_per_min ?? 0)}<span class="unit">/min</span></dd></div>
+        <div><dt>Finishes</dt><dd>${b.etaDays !== null
+          ? `${b.etaDays}<span class="unit">d</span>` : '&mdash;'}</dd></div>
+        ${Number(b.failed) ? `<div><dt>Failed</dt><dd class="warn">${num(b.failed)}</dd></div>` : ''}
       </dl>
-      ${b.current?.reg ? `<p class="now"><span class="dot"></span><span class="reg">${
-        esc(b.current.reg)}</span> ${esc(b.current.name || '')}</p>` : ''}
-      <footer>updated ${esc(ago(b.ageSec))}</footer>
+
+      ${b.current?.reg ? `<p class="now">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="now-txt"><span class="reg">${esc(b.current.reg)}</span>
+        <span class="nm">${esc(b.current.name || '')}</span></span>
+      </p>` : ''}
+
+      <footer>read ${esc(ago(b.ageSec))}</footer>
     </article>`).join('');
 
   return `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>cattle-graph</title>
+<meta name="color-scheme" content="light dark">
+<title>Cattle Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&display=swap">
 <style>
-  :root{color-scheme:light dark;--bg:#fbfaf8;--fg:#1a1a19;--dim:#6b6b66;--line:#e4e1db;
-        --card:#fff;--good:#2a7f4f;--bad:#b4322a;--accent:#8a6a3c}
+  /* --------------------------------------------------------------------
+     Ranch ledger. Warm paper, saddle tan, pasture green, barn red. The
+     restraint is deliberate: this is a thing glanced at on a phone in a
+     barn, so the numbers carry the page and the theme stays in the palette
+     and the slab serif rather than in decoration.
+     Mobile first -- every base rule targets a narrow screen, and the two
+     min-width blocks at the end are the only widening.
+     -------------------------------------------------------------------- */
+  :root{
+    --paper:#f7f1e6; --card:#fffdf8; --ink:#241c12; --dim:#7d6b55;
+    --rule:#e2d6c0; --rule-soft:#efe6d5;
+    --tan:#a8763a; --wheat:#d8b56a;
+    --pasture:#4a7c4e; --barn:#a33a2c;
+    --shadow:0 1px 2px rgba(60,42,20,.05), 0 6px 16px -10px rgba(60,42,20,.22);
+  }
   @media (prefers-color-scheme:dark){
-    :root{--bg:#16161a;--fg:#eceae5;--dim:#96948d;--line:#2c2c33;--card:#1d1d22;
-          --good:#5ec07f;--bad:#e8776c;--accent:#c9a25e}}
+    :root{
+      --paper:#17130d; --card:#211a12; --ink:#f2e9da; --dim:#a08e76;
+      --rule:#3a2f20; --rule-soft:#2b2318;
+      --tan:#c99553; --wheat:#e0bd76;
+      --pasture:#77b07a; --barn:#e0786a;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 18px -12px rgba(0,0,0,.7);
+    }
+  }
   *{box-sizing:border-box}
-  body{margin:0;padding:2rem 1.25rem 4rem;background:var(--bg);color:var(--fg);
-       font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-  main{max-width:60rem;margin:0 auto}
-  h1{font-size:1.35rem;margin:0 0 .2rem;letter-spacing:-.01em}
-  .sub{color:var(--dim);font-size:.85rem;margin:0 0 1.75rem}
-  .banner{background:var(--bad);color:#fff;padding:.6rem .9rem;border-radius:.5rem;
-          margin:0 0 1.5rem;font-size:.88rem}
-  .totals{display:flex;flex-wrap:wrap;gap:1.75rem;padding:1.1rem 1.25rem;background:var(--card);
-          border:1px solid var(--line);border-radius:.7rem;margin-bottom:1.5rem}
-  .totals div{min-width:6rem}
-  .totals dt{color:var(--dim);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 .15rem}
-  .totals dd{margin:0;font-size:1.5rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-  .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
-  /* Flex column so a card with no failed-count still sits its footer on the
-     baseline instead of floating mid-card. */
-  .card{background:var(--card);border:1px solid var(--line);border-radius:.7rem;
-        padding:1.1rem 1.25rem;display:flex;flex-direction:column}
-  .card.stale{border-color:var(--bad)}
-  .card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
-  .card h2{font-size:1rem;margin:0;letter-spacing:.02em}
-  .pill{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;padding:.2rem .5rem;
-        border-radius:1rem;border:1px solid currentColor}
-  .pill.good{color:var(--good)} .pill.bad{color:var(--bad)}
-  .bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
-  .bar span{display:block;height:100%;background:var(--accent)}
-  .pct{margin:.4rem 0 .9rem;font-size:.8rem;color:var(--dim);font-variant-numeric:tabular-nums}
-  .card dl{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1rem;margin:0}
-  .card dt{color:var(--dim);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
-  .card dd{margin:0;font-variant-numeric:tabular-nums}
-  .card dd.warn{color:var(--bad)}
-  .card footer{margin-top:auto;padding-top:.7rem;border-top:1px solid var(--line);
-               color:var(--dim);font-size:.75rem}
-  .card dl{margin-bottom:.9rem}
-  /* The animal being read right now. Sits directly above the footer so the
-     eye finds it in the same place on every card. */
-  .now{margin:0 0 .3rem;font-size:.82rem;display:flex;align-items:center;gap:.45rem;
-       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .now .reg{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--good);flex:none;
-       animation:pulse 2s ease-in-out infinite}
-  .card.stale .dot{background:var(--bad);animation:none}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; padding:1.5rem 1.1rem 3rem;
+    background:var(--paper); color:var(--ink);
+    font:400 16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    /* A whisper of tooth in the paper. Two very low-contrast washes, no image. */
+    background-image:
+      radial-gradient(ellipse at 12% -10%, rgba(168,118,58,.07), transparent 60%),
+      radial-gradient(ellipse at 92% 4%, rgba(74,124,78,.05), transparent 55%);
+    background-attachment:fixed;
+  }
+  main{max-width:64rem;margin:0 auto}
+
+  /* ---------- masthead ---------- */
+  .masthead{margin:0 0 1.5rem;text-align:center}
+  .masthead h1{
+    font-family:Bitter,Georgia,"Iowan Old Style",serif;
+    font-weight:700; font-size:clamp(1.5rem,7vw,2.1rem); line-height:1.1;
+    margin:0; letter-spacing:.02em; text-transform:uppercase;
+  }
+  .masthead .sub{
+    margin:.5rem 0 0; color:var(--dim);
+    font-size:.76rem; letter-spacing:.16em; text-transform:uppercase;
+  }
+  /* Ledger rule: a heavy hair over a light one, the way a stock certificate
+     or a feed-store letterhead separates the name from the business. */
+  .masthead::after{
+    content:""; display:block; margin:.95rem auto 0; width:min(100%,22rem); height:3px;
+    border-top:2px solid var(--tan); border-bottom:1px solid var(--rule);
+  }
+
+  .banner{
+    background:var(--barn); color:#fff; padding:.75rem .95rem; border-radius:.6rem;
+    margin:0 0 1.25rem; font-size:.9rem; line-height:1.4;
+    box-shadow:var(--shadow);
+  }
+
+  /* ---------- totals ---------- */
+  .totals{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:1rem .75rem;
+    margin:0 0 1.4rem; padding:1.1rem 1rem;
+    background:var(--card); border:1px solid var(--rule); border-radius:.85rem;
+    box-shadow:var(--shadow);
+  }
+  .totals dt{
+    color:var(--dim); font-size:.66rem; letter-spacing:.12em;
+    text-transform:uppercase; margin:0 0 .2rem;
+  }
+  .totals dd{
+    margin:0; font-family:Bitter,Georgia,serif; font-weight:600;
+    font-size:clamp(1.25rem,5.5vw,1.6rem); line-height:1.1;
+    font-variant-numeric:tabular-nums; letter-spacing:-.01em;
+  }
+
+  /* ---------- cards ---------- */
+  .grid{display:grid; gap:1rem; grid-template-columns:1fr}
+  .card{
+    background:var(--card); border:1px solid var(--rule); border-radius:.85rem;
+    padding:1.15rem 1.15rem 1rem; display:flex; flex-direction:column;
+    box-shadow:var(--shadow);
+    /* A branded edge, like a paint stripe down a stall post. */
+    border-left:4px solid var(--tan);
+  }
+  .card.stale{border-left-color:var(--barn)}
+  .card-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:.75rem; margin-bottom:.9rem;
+  }
+  .card-head h2{
+    font-family:Bitter,Georgia,serif; font-weight:700; font-size:1.15rem;
+    margin:0; letter-spacing:.06em;
+  }
+  .pill{
+    font-size:.62rem; letter-spacing:.13em; text-transform:uppercase;
+    padding:.28rem .6rem; border-radius:1rem; border:1px solid currentColor;
+    white-space:nowrap; flex:none;
+  }
+  .pill.good{color:var(--pasture)} .pill.bad{color:var(--barn)}
+
+  .bar{height:7px; background:var(--rule-soft); border-radius:4px; overflow:hidden}
+  .bar span{
+    display:block; height:100%; border-radius:4px;
+    background:linear-gradient(90deg,var(--tan),var(--wheat));
+  }
+  .pct{margin:.5rem 0 1rem; font-size:.8rem; color:var(--dim)}
+  .pct b{color:var(--ink); font-variant-numeric:tabular-nums; font-weight:600}
+
+  .figures{display:grid; grid-template-columns:repeat(2,1fr); gap:.85rem 1rem; margin:0 0 1rem}
+  .figures dt{
+    color:var(--dim); font-size:.64rem; letter-spacing:.11em;
+    text-transform:uppercase; margin-bottom:.15rem;
+  }
+  .figures dd{
+    margin:0; font-variant-numeric:tabular-nums;
+    font-size:1.05rem; font-weight:600;
+  }
+  .figures .unit{font-weight:400; font-size:.8em; color:var(--dim); margin-left:.1em}
+  .figures dd.warn{color:var(--barn)}
+
+  /* ---------- the animal on the stand right now ---------- */
+  .now{
+    margin:0 0 .85rem; padding:.55rem .7rem;
+    background:var(--rule-soft); border-radius:.5rem;
+    display:flex; align-items:center; gap:.55rem;
+    font-size:.85rem; min-width:0;
+  }
+  .now-txt{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .now .reg{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--dim); font-size:.92em}
+  .now .nm{font-weight:600}
+  .dot{
+    width:7px; height:7px; border-radius:50%; background:var(--pasture); flex:none;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--pasture) 22%,transparent);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  .card.stale .dot{background:var(--barn); box-shadow:none; animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   @media (prefers-reduced-motion:reduce){.dot{animation:none}}
-  .foot{margin-top:2rem;color:var(--dim);font-size:.78rem}
+
+  .card footer{
+    margin-top:auto; padding-top:.7rem; border-top:1px solid var(--rule-soft);
+    color:var(--dim); font-size:.72rem; letter-spacing:.04em;
+  }
+
+  .foot{
+    margin:1.75rem 0 0; text-align:center; color:var(--dim);
+    font-size:.72rem; line-height:1.6;
+  }
+
+  /* ---------- widening ---------- */
+  @media (min-width:34rem){
+    body{padding:2.25rem 1.5rem 4rem}
+    .totals{grid-template-columns:repeat(3,1fr); padding:1.25rem 1.4rem}
+  }
+  @media (min-width:52rem){
+    .totals{display:flex; flex-wrap:wrap; gap:2rem}
+    .totals > div{min-width:6.5rem}
+    .grid{grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))}
+  }
 </style>
 <main>
-  <h1>cattle-graph</h1>
-  <p class="sub">pedigree crawl across four breed registries &middot; read-only</p>
+  <div class="masthead">
+    <h1>Cattle Graph</h1>
+    <p class="sub">Pedigree crawl &middot; four breed registries</p>
+  </div>
 
   ${s.reporting ? '' : `<p class="banner">The crawl box last reported ${esc(ago(s.publishAgeSec))}.
      These numbers are not live &mdash; check the instance.</p>`}
 
   <dl class="totals">
-    <div><dt>animals</dt><dd>${num(s.totals.done)}</dd></div>
-    <div><dt>pending</dt><dd>${num(s.totals.pending)}</dd></div>
-    <div><dt>complete</dt><dd>${pctTotal.toFixed(1)}%</dd></div>
-    ${s.totals.failed ? `<div><dt>failed</dt><dd>${num(s.totals.failed)}</dd></div>` : ''}
-    ${s.disk ? `<div><dt>disk free</dt><dd>${esc(s.disk.free_gb)}G</dd></div>` : ''}
+    <div><dt>Animals</dt><dd>${num(s.totals.done)}</dd></div>
+    <div><dt>Remaining</dt><dd>${num(s.totals.pending)}</dd></div>
+    <div><dt>Complete</dt><dd>${pctTotal.toFixed(1)}%</dd></div>
+    ${s.totals.failed ? `<div><dt>Failed</dt><dd>${num(s.totals.failed)}</dd></div>` : ''}
+    ${s.disk ? `<div><dt>Disk free</dt><dd>${esc(s.disk.free_gb)}G</dd></div>` : ''}
   </dl>
 
-  <div class="grid">${cards || '<p class="sub">Nothing published yet.</p>'}</div>
+  <div class="grid">${cards || '<p class="foot">Nothing published yet.</p>'}</div>
 
-  <p class="foot">published ${esc(ago(s.publishAgeSec))} &middot;
-     controls stay on the crawl box, reachable over SSH only</p>
+  <p class="foot">Published ${esc(ago(s.publishAgeSec))}<br>
+     Controls stay on the crawl box, reachable over SSH only</p>
 </main>
 <script>
 // Live update. Rather than re-implementing the card markup in the browser and
