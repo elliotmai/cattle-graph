@@ -2,6 +2,19 @@ import { getStore } from '@netlify/blobs';
 import { timingSafeEqual } from 'node:crypto';
 
 /**
+ * netlify.toml [[headers]] apply to static assets, not to what a function
+ * returns. A probe of the deployed 401 came back with neither X-Robots-Tag
+ * nor X-Frame-Options, so the board sets them itself.
+ */
+const SECURITY = {
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-robots-tag': 'noindex, nofollow',
+  'cache-control': 'no-store',
+};
+
+/**
  * The public status board. Read-only on purpose.
  *
  * dashboard_web.py on the crawl box also exposes /api/load, /api/schema,
@@ -18,7 +31,7 @@ export default async (request) => {
     // without anyone noticing.
     return new Response('CATTLE_VIEW_PASSWORD is not set on this site', {
       status: 503,
-      headers: { 'cache-control': 'no-store' },
+      headers: SECURITY,
     });
   }
   if (!authorized(request.headers.get('authorization'), expected)) {
@@ -27,8 +40,8 @@ export default async (request) => {
     return new Response('Authentication required', {
       status: 401,
       headers: {
+        ...SECURITY,
         'www-authenticate': 'Basic realm="cattle-graph", charset="UTF-8"',
-        'cache-control': 'no-store',
       },
     });
   }
@@ -43,11 +56,11 @@ export default async (request) => {
 
   if (new URL(request.url).pathname.endsWith('.json')) {
     return new Response(JSON.stringify(summary, null, 2), {
-      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      headers: { ...SECURITY, 'content-type': 'application/json' },
     });
   }
   return new Response(renderHtml(summary), {
-    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+    headers: { ...SECURITY, 'content-type': 'text/html; charset=utf-8' },
   });
 };
 
