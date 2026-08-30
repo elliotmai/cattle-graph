@@ -129,7 +129,7 @@ bundler inlines into client JS is public. `CATTLE_INGEST_TOKEN` also goes in
 
 Both endpoints return **503 when their variable is unset** rather than falling
 open. A typo'd variable name breaks the site loudly instead of quietly
-publishing it. `netlify/functions/auth.test.mjs` asserts that, plus the
+publishing it. `test/auth.test.mjs` asserts that, plus the
 constant-time compare and the field allowlist:
 
 ```bash
