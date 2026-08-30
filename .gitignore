@@ -22,3 +22,6 @@ venv/
 # Build artifacts / large media
 crawler.zip
 *.mp4
+
+# Local stdout/stderr from Windows-launched crawlers (systemd uses journald)
+logs/
