@@ -24,3 +24,16 @@
     # already blocks a crawler, but the header costs nothing and covers the
     # window where the password is briefly unset.
     X-Robots-Tag = "noindex, nofollow"
+
+# Netlify has no mapping for .webmanifest and falls back to
+# application/octet-stream. A manifest served as a generic binary is ignored
+# outright, which takes the Android home-screen icon with it.
+[[headers]]
+  for = "/site.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

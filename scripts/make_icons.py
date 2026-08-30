@@ -100,14 +100,19 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     written = []
 
-    for name, size, mask in [
-        ("apple-touch-icon.png", 180, False),   # iOS home screen
-        ("icon-192.png", 192, False),
-        ("icon-512.png", 512, False),
-        ("icon-maskable-512.png", 512, True),
+    for name, size, mask, flatten in [
+        # iOS composites an alpha channel unpredictably and the icon is opaque
+        # anyway, so the touch icon ships as plain RGB.
+        ("apple-touch-icon.png", 180, False, True),
+        ("icon-192.png", 192, False, False),
+        ("icon-512.png", 512, False, False),
+        ("icon-maskable-512.png", 512, True, False),
     ]:
         p = os.path.join(OUT, name)
-        render(size, mask).save(p)
+        img = render(size, mask)
+        if flatten:
+            img = img.convert("RGB")
+        img.save(p)
         written.append((name, os.path.getsize(p)))
 
     # One .ico carrying the small sizes browsers actually pick from.
