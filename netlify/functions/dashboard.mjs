@@ -107,9 +107,17 @@ export function summarize(entries) {
 
   const publishAgeSec = publishedAt ? Math.round((now - Date.parse(publishedAt)) / 1000) : null;
 
+  // When the whole crawl finishes is the LONGEST leg, not the sum: the three
+  // crawlers run at once against separate registries, so MAINE finishing in
+  // three weeks does nothing for CHIA's eight. Summing them would roughly
+  // treble the real answer.
+  const etas = boards.map((b) => b.etaDays).filter((d) => d !== null);
+  const etaDaysOverall = etas.length ? Math.max(...etas) : null;
+
   return {
     boards,
     totals,
+    etaDaysOverall,
     publishedAt,
     publishAgeSec,
     // The box publishes every 60s; five minutes of silence means the box
@@ -129,6 +137,15 @@ const ago = (s) => s === null ? 'never'
   : `${Math.round(s / 86400)}d ago`;
 
 const num = (n) => (Number(n) || 0).toLocaleString('en-US');
+
+/** A span of days, said the way a person would say it. */
+const dur = (days) => {
+  if (days === null || !isFinite(days)) return '&mdash;';
+  if (days < 1) return `${Math.max(1, Math.round(days * 24))} hr`;
+  if (days < 14) return `${Math.round(days)} days`;
+  if (days < 70) return `${(days / 7).toFixed(1)} wks`;
+  return `${(days / 30.44).toFixed(1)} mo`;
+};
 
 export function renderHtml(s) {
   const pctTotal = s.totals.done + s.totals.pending > 0
@@ -169,6 +186,13 @@ export function renderHtml(s) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>Cattle Graph</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Cattle Graph">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f1e6">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17130d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&display=swap">
@@ -251,6 +275,9 @@ export function renderHtml(s) {
     font-size:clamp(1.25rem,5.5vw,1.6rem); line-height:1.1;
     font-variant-numeric:tabular-nums; letter-spacing:-.01em;
   }
+  /* "How long until this is over" is the question the page gets asked most,
+     so it is the one figure given the accent colour. */
+  .totals .eta dd{color:var(--tan)}
 
   /* ---------- cards ---------- */
   .grid{display:grid; gap:1rem; grid-template-columns:1fr}
@@ -350,6 +377,7 @@ export function renderHtml(s) {
     <div><dt>Animals</dt><dd>${num(s.totals.done)}</dd></div>
     <div><dt>Remaining</dt><dd>${num(s.totals.pending)}</dd></div>
     <div><dt>Complete</dt><dd>${pctTotal.toFixed(1)}%</dd></div>
+    <div class="eta"><dt>Time left</dt><dd>${dur(s.etaDaysOverall)}</dd></div>
     ${s.totals.failed ? `<div><dt>Failed</dt><dd>${num(s.totals.failed)}</dd></div>` : ''}
     ${s.disk ? `<div><dt>Disk free</dt><dd>${esc(s.disk.free_gb)}G</dd></div>` : ''}
   </dl>
