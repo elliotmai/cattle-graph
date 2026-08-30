@@ -1,0 +1,55 @@
+# One crawler per association. Instance name IS the association code:
+#   systemctl enable --now crawl@CHIA crawl@MAINE crawl@SHORT
+#
+# No --seed: the frontier DB already holds the queue, and crawl.py drains it
+# on its own. Seeds are only for starting an association from nothing.
+#
+# No --reset-skipped either: that was a one-off to re-queue entries a
+# robots-respecting run had passed over. Under Restart=always it would re-run
+# on every restart, so keep it a manual command instead.
+
+[Unit]
+Description=cattle-graph crawler (%i)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/cattle-graph
+EnvironmentFile=/etc/cattle-graph.env
+ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
+    --association %i \
+    --out /opt/cattle-graph/data_%i.jsonl \
+    --db /opt/cattle-graph/frontier_%i.db \
+    --status-file /opt/cattle-graph/status_%i.json \
+    --ignore-robots \
+    --skip-steers \
+    --delay ${CRAWL_DELAY} \
+    --user-agent "${CRAWL_UA}"
+
+# A blocked or rate-limited association should back off, not hot-loop.
+Restart=always
+RestartSec=60
+
+# Politeness is the point; never let a crawler starve the box.
+Nice=5
+
+# Logs go to journald, which rotates itself. The old -v flag produced ~16 MB
+# a day per crawler; without it these stay small. journalctl -u crawl@CHIA -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crawl-%i
+
+# Light hardening. The crawler only needs its own directory and the network.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/cattle-graph
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,39 @@
+# The status dashboard. Deliberately bound to loopback.
+#
+# dashboard_web.py defaults to HOST=0.0.0.0 and serves unauthenticated POST
+# endpoints (/api/schema, /api/load, /api/autoload, /api/reconcile) that
+# trigger real work against Neo4j. That is fine on a home LAN and not fine on
+# a public IP, so DASH_HOST pins it to 127.0.0.1 and you reach it through an
+# SSH tunnel instead of opening port 8787:
+#
+#   ssh -i key.pem -L 8787:localhost:8787 ubuntu@<static-ip>
+#   then browse http://localhost:8787
+
+[Unit]
+Description=cattle-graph dashboard (localhost only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/cattle-graph
+EnvironmentFile=/etc/cattle-graph.env
+Environment=DASH_HOST=127.0.0.1
+ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/dashboard_web.py
+Restart=always
+RestartSec=15
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cattle-dashboard
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/cattle-graph
+
+[Install]
+WantedBy=multi-user.target
