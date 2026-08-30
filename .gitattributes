@@ -4,6 +4,7 @@
 # Pin the deploy artifacts to LF regardless of what the checkout platform wants.
 *.sh       text eol=lf
 *.service  text eol=lf
+*.timer    text eol=lf
 *.py       text eol=lf
 *.cypher   text eol=lf
 *.mjs      text eol=lf
