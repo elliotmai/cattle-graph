@@ -1,0 +1,24 @@
+# Crawl state and harvested data. Large, and the frontier DBs are the
+# resumable state -- they belong in snapshots/backups, not in git.
+data_*.jsonl
+frontier_*.db
+frontier_*.db-wal
+frontier_*.db-journal
+status_*.json
+load_offsets.json
+*.log
+
+# Credentials. The Aura creds file in particular must never be committed.
+Neo4j-*.txt
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build artifacts / large media
+crawler.zip
+*.mp4

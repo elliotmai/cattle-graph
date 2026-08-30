@@ -1,0 +1,2969 @@
+{
+  "source": "records.jsonl",
+  "elapsed_ms": 1.577,
+  "summary": {
+    "records": 12,
+    "animals": 26,
+    "registrations": 36,
+    "associations": 2,
+    "breeds": 4,
+    "defects": 6,
+    "dna_cases": 0,
+    "parent_edges": 24,
+    "merges": {
+      "intl_id": 0,
+      "registration": 6,
+      "dna": 0,
+      "cross_ref": 0,
+      "tattoo_dob_sex": 0,
+      "name_dob": 0
+    }
+  },
+  "animals": [
+    {
+      "uid": "RDPUSAM000000430053",
+      "name": "ZNT MOVES LIKE JAGGER",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA430053",
+        "MAINE:430053"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 73.049
+        },
+        {
+          "breed": "AN",
+          "percent": 19.733
+        },
+        {
+          "breed": "CA",
+          "percent": 2.881
+        },
+        {
+          "breed": "XX",
+          "percent": 4.338
+        }
+      ],
+      "defects": {
+        "AM": "S",
+        "DD": "S",
+        "NH": "S",
+        "PHA": "F",
+        "TH": "F"
+      }
+    },
+    {
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "name": "GVC SUH 01W",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA402617",
+        "MAINE:402617"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 77.345
+        },
+        {
+          "breed": "AN",
+          "percent": 18.385
+        },
+        {
+          "breed": "XX",
+          "percent": 4.27
+        }
+      ],
+      "defects": {
+        "AM": "F",
+        "CA": "F",
+        "DD": "S",
+        "NH": "F",
+        "PHA": "F",
+        "TH": "F"
+      }
+    },
+    {
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "name": "ZNT JENNA 707T",
+      "color": "Red",
+      "horn": "Polled",
+      "registrations": [
+        "CHIA:337003"
+      ],
+      "composition": [
+        {
+          "breed": "CA",
+          "percent": 6.44
+        },
+        {
+          "breed": "MA",
+          "percent": 69.14
+        },
+        {
+          "breed": "AN",
+          "percent": 23.82
+        },
+        {
+          "breed": "XX",
+          "percent": 0.6
+        }
+      ],
+      "defects": {
+        "AM": "S",
+        "DD": "S",
+        "NH": "S",
+        "PHA": "F",
+        "TH": "F"
+      }
+    },
+    {
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "name": "GVC STATESMAN 4R ET",
+      "color": "Black",
+      "horn": "Polled",
+      "registrations": [
+        "CHIA:422338",
+        "MAINE:351746"
+      ],
+      "composition": [
+        {
+          "breed": "CA",
+          "percent": 0.685
+        },
+        {
+          "breed": "AN",
+          "percent": 7.813
+        },
+        {
+          "breed": "MA",
+          "percent": 89.453
+        },
+        {
+          "breed": "XX",
+          "percent": 2.053
+        }
+      ],
+      "defects": {
+        "AM": "S",
+        "DD": "S",
+        "NH": "S",
+        "PHA": "F",
+        "TH": "F"
+      }
+    },
+    {
+      "uid": "TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3",
+      "name": "MISS GREEN VALLEY 007K",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA351931"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-aed3b602-706c-448c-a4fb-03b31fe97d05",
+      "name": "CMAC HARD CORE",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA323178"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85",
+      "name": "JAZX AUDREY 352N",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:303231"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "RDPCANM000000040472",
+      "name": "NBH POLLED ENERGIZER 688",
+      "color": "Black",
+      "horn": "Polled",
+      "registrations": [
+        "CHIA:MA242107"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 100.0
+        }
+      ],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176",
+      "name": "JF WAR CHIEF",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA185219"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-282b56d7-1506-42b3-b3b4-35605a60a39b",
+      "name": "DUKES MARVELLA 88X",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA22307"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "RDPUSAM000000264806",
+      "name": "DCC THE MAN",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA264806",
+        "MAINE:264806"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 100.0
+        }
+      ],
+      "defects": {
+        "PHA": "F",
+        "TH": "F"
+      }
+    },
+    {
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "name": "FJD PLAYMATE 7051G",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA238367",
+        "MAINE:238367"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 75.0
+        },
+        {
+          "breed": "AN",
+          "percent": 21.95
+        },
+        {
+          "breed": "XX",
+          "percent": 3.05
+        }
+      ],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8",
+      "name": "MCG HEISMAN 44E",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA213912"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991",
+      "name": "MISS FJD 307X",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA202543"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "name": "GVC JAZZMYN 001L",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:422337",
+        "MAINE:286130"
+      ],
+      "composition": [
+        {
+          "breed": "CA",
+          "percent": 1.365
+        },
+        {
+          "breed": "AN",
+          "percent": 15.625
+        },
+        {
+          "breed": "MA",
+          "percent": 78.905
+        },
+        {
+          "breed": "XX",
+          "percent": 4.105
+        }
+      ],
+      "defects": {
+        "AM": "S",
+        "DD": "S",
+        "NH": "S"
+      }
+    },
+    {
+      "uid": "RDPUSAM000000247388",
+      "name": "DVMM JAZZ",
+      "color": "Black",
+      "horn": "Horned",
+      "registrations": [
+        "CHIA:333396",
+        "MAINE:247388"
+      ],
+      "composition": [
+        {
+          "breed": "CA",
+          "percent": 2.73
+        },
+        {
+          "breed": "MA",
+          "percent": 64.06
+        },
+        {
+          "breed": "AN",
+          "percent": 31.25
+        },
+        {
+          "breed": "XX",
+          "percent": 1.96
+        }
+      ],
+      "defects": {
+        "AM": "S",
+        "DD": "S",
+        "NH": "S"
+      }
+    },
+    {
+      "uid": "TMP-d054aba4-79f4-48e0-93a6-474a752542a5",
+      "name": "FGJ HABANERO",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:264745"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf",
+      "name": "DVMM 9611",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA247276"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "name": "GREEN VALLEY EVE 501E",
+      "color": "Black",
+      "horn": "Polled",
+      "registrations": [
+        "CHIA:MA214871",
+        "MAINE:214871"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 93.75
+        },
+        {
+          "breed": "XX",
+          "percent": 6.25
+        }
+      ],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b",
+      "name": "PLD PURSUIT",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA157403"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a",
+      "name": "GREEN VALLEY JERRI",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA175515"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "RDPUSAM000000221646",
+      "name": "NAGE FAST TRACK 30F ET",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA221646",
+        "MAINE:221646"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 93.75
+        },
+        {
+          "breed": "AN",
+          "percent": 3.65
+        },
+        {
+          "breed": "XX",
+          "percent": 2.6
+        }
+      ],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732",
+      "name": "DJ BULLS EYE B474",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA171351"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432",
+      "name": "NAGE ARETHA 19D",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA200572"
+      ],
+      "composition": [],
+      "defects": {}
+    },
+    {
+      "uid": "RDPUSAM000000260105",
+      "name": "NAGE WIDE TRACK 94J",
+      "color": null,
+      "horn": "Horned",
+      "registrations": [
+        "CHIA:MA260105",
+        "MAINE:260105"
+      ],
+      "composition": [
+        {
+          "breed": "MA",
+          "percent": 90.63
+        },
+        {
+          "breed": "AN",
+          "percent": 5.73
+        },
+        {
+          "breed": "XX",
+          "percent": 3.64
+        }
+      ],
+      "defects": {
+        "PHA": "S"
+      }
+    },
+    {
+      "uid": "TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8",
+      "name": "NAGE 74E",
+      "color": null,
+      "horn": null,
+      "registrations": [
+        "CHIA:MA212356"
+      ],
+      "composition": [],
+      "defects": {}
+    }
+  ],
+  "events": [
+    {
+      "type": "record_start",
+      "index": 0,
+      "assoc": "CHIA",
+      "reg": "MA430053",
+      "name": "ZNT MOVES LIKE JAGGER",
+      "intl_id": "RDPUSAM000000430053",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA430053",
+      "t": 0.0104
+    },
+    {
+      "type": "animal",
+      "uid": "RDPUSAM000000430053",
+      "stub": false,
+      "name": "ZNT MOVES LIKE JAGGER",
+      "sex": "M",
+      "dob": "2011-09-10",
+      "color": null,
+      "horn": null,
+      "intl_id": "RDPUSAM000000430053",
+      "tattoo": null,
+      "t": 0.1738
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000430053",
+      "assoc": "CHIA",
+      "reg": "MA430053",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) NATALIE MAI ( 65020 )",
+      "breeder": null,
+      "epds": {
+        "CED": 10.0,
+        "BW": 1.9,
+        "WW": 41.0,
+        "YW": 55.0,
+        "MILK": 13.0,
+        "TM": 33.0,
+        "CEM": 0.0,
+        "STAY": -3.0,
+        "DOC": 9.8,
+        "YG": -0.43,
+        "CW": 13.0,
+        "CREA": 0.71,
+        "MARB": 0.15,
+        "CFAT": -0.09,
+        "API": 86.78,
+        "TI": 65.51
+      },
+      "attributes": {
+        "coi": "2.05%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "2.88",
+        "pedigree_ancestors": 27,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA430053",
+      "t": 0.2674
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000430053",
+      "code": "MA",
+      "percent": 73.049,
+      "new": true,
+      "t": 0.2755
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000430053",
+      "code": "AN",
+      "percent": 19.733,
+      "new": true,
+      "t": 0.2818
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000430053",
+      "code": "CA",
+      "percent": 2.881,
+      "new": true,
+      "t": 0.2846
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000430053",
+      "code": "XX",
+      "percent": 4.338,
+      "new": true,
+      "t": 0.2865
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000430053",
+      "code": "AM",
+      "status": "S",
+      "new": true,
+      "t": 0.2902
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000430053",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 0.2932
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000430053",
+      "code": "NH",
+      "status": "S",
+      "new": true,
+      "t": 0.2957
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000430053",
+      "code": "PHA",
+      "status": "F",
+      "new": true,
+      "t": 0.2976
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000430053",
+      "code": "TH",
+      "status": "F",
+      "new": true,
+      "t": 0.2993
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000430053",
+      "assoc": "MAINE",
+      "reg": "430053",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.3084
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "stub": true,
+      "name": "GVC SUH 01W",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.374
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "assoc": "CHIA",
+      "reg": "MA402617",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.3809
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000430053",
+      "parent": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.3849
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "stub": true,
+      "name": "ZNT JENNA 707T",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.4037
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "assoc": "CHIA",
+      "reg": "337003",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.4079
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000430053",
+      "parent": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "role": "DAM",
+      "new": true,
+      "t": 0.4116
+    },
+    {
+      "type": "record_end",
+      "index": 0,
+      "uid": "RDPUSAM000000430053",
+      "stats": {
+        "records": 1,
+        "animals": 3,
+        "merges": {
+          "intl_id": 0,
+          "registration": 0,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.4143
+    },
+    {
+      "type": "record_start",
+      "index": 1,
+      "assoc": "CHIA",
+      "reg": "MA402617",
+      "name": "GVC SUH 01W",
+      "intl_id": "RDPUSAM000000402617",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA402617",
+      "t": 0.4171
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "via": "registration",
+      "t": 0.431
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "gained": {
+        "intl_id": "RDPUSAM000000402617",
+        "sex": "M",
+        "dob": "2009-02-16",
+        "tattoo": "LE: 01W DGW"
+      },
+      "name": "GVC SUH 01W",
+      "color": null,
+      "horn": null,
+      "sex": "M",
+      "dob": "2009-02-16",
+      "intl_id": "RDPUSAM000000402617",
+      "t": 0.447
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "assoc": "CHIA",
+      "reg": "MA402617",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 2.0,
+        "BW": 4.5,
+        "WW": 54.0,
+        "YW": 76.0,
+        "MILK": 12.0,
+        "TM": 40.0,
+        "CEM": -4.0,
+        "STAY": -1.0,
+        "DOC": 10.7,
+        "YG": -0.39,
+        "CW": 15.0,
+        "CREA": 0.65,
+        "MARB": 0.22,
+        "CFAT": -0.08,
+        "API": 85.69,
+        "TI": 70.48
+      },
+      "attributes": {
+        "coi": "3.59%",
+        "service_type": "Artificial Insemination",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 27,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA402617",
+      "t": 0.491
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "MA",
+      "percent": 77.345,
+      "new": true,
+      "t": 0.4957
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "AN",
+      "percent": 18.385,
+      "new": true,
+      "t": 0.4979
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "XX",
+      "percent": 4.27,
+      "new": true,
+      "t": 0.4996
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "AM",
+      "status": "F",
+      "new": true,
+      "t": 0.5026
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "CA",
+      "status": "F",
+      "new": true,
+      "t": 0.5043
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 0.5058
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "NH",
+      "status": "F",
+      "new": true,
+      "t": 0.5076
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "PHA",
+      "status": "F",
+      "new": true,
+      "t": 0.5093
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "code": "TH",
+      "status": "F",
+      "new": true,
+      "t": 0.5115
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "assoc": "MAINE",
+      "reg": "402617",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.5179
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "stub": true,
+      "name": "GVC STATESMAN 4R ET",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.5382
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "assoc": "CHIA",
+      "reg": "422338",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.5425
+    },
+    {
+      "type": "parent",
+      "child": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "parent": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.5454
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3",
+      "stub": true,
+      "name": "MISS GREEN VALLEY 007K",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.5562
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3",
+      "assoc": "CHIA",
+      "reg": "MA351931",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.5604
+    },
+    {
+      "type": "parent",
+      "child": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "parent": "TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3",
+      "role": "DAM",
+      "new": true,
+      "t": 0.5626
+    },
+    {
+      "type": "record_end",
+      "index": 1,
+      "uid": "TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18",
+      "stats": {
+        "records": 2,
+        "animals": 5,
+        "merges": {
+          "intl_id": 0,
+          "registration": 1,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.5652
+    },
+    {
+      "type": "record_start",
+      "index": 2,
+      "assoc": "CHIA",
+      "reg": "337003",
+      "name": "ZNT JENNA 707T",
+      "intl_id": "CIAUSAF000000337003",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=337003",
+      "t": 0.5675
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "via": "registration",
+      "t": 0.5756
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "gained": {
+        "intl_id": "CIAUSAF000000337003",
+        "sex": "F",
+        "dob": "2007-09-30",
+        "tattoo": "ZNT LE: 707T",
+        "color": "Red",
+        "horn_status": "Polled"
+      },
+      "name": "ZNT JENNA 707T",
+      "color": "Red",
+      "horn": "Polled",
+      "sex": "F",
+      "dob": "2007-09-30",
+      "intl_id": "CIAUSAF000000337003",
+      "t": 0.5879
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "assoc": "CHIA",
+      "reg": "337003",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) RANDY PETTY ( 75420 )",
+      "breeder": "(N) ZNT CATTLE CO ( 36694 )",
+      "epds": {
+        "CED": 10.0,
+        "BW": 2.2,
+        "WW": 38.0,
+        "YW": 49.0,
+        "MILK": 14.0,
+        "TM": 33.0,
+        "CEM": 3.0,
+        "STAY": -2.0,
+        "DOC": 8.2,
+        "YG": -0.54,
+        "CW": 14.0,
+        "CREA": 0.89,
+        "MARB": 0.0,
+        "CFAT": -0.11,
+        "API": 78.19,
+        "TI": 60.3
+      },
+      "attributes": {
+        "coi": "0%",
+        "service_type": "Artificial Insemination",
+        "registry_status": "Active",
+        "chianina_percent": "6.44 Classification: 1CM",
+        "pedigree_ancestors": 24,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=337003",
+      "t": 0.6261
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "CA",
+      "percent": 6.44,
+      "new": true,
+      "t": 0.6301
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "MA",
+      "percent": 69.14,
+      "new": true,
+      "t": 0.6323
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "AN",
+      "percent": 23.82,
+      "new": true,
+      "t": 0.634
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "XX",
+      "percent": 0.6,
+      "new": true,
+      "t": 0.6357
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "AM",
+      "status": "S",
+      "new": true,
+      "t": 0.6382
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 0.6399
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "NH",
+      "status": "S",
+      "new": true,
+      "t": 0.6415
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "PHA",
+      "status": "F",
+      "new": true,
+      "t": 0.6432
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "code": "TH",
+      "status": "F",
+      "new": true,
+      "t": 0.6451
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-aed3b602-706c-448c-a4fb-03b31fe97d05",
+      "stub": true,
+      "name": "CMAC HARD CORE",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.6606
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-aed3b602-706c-448c-a4fb-03b31fe97d05",
+      "assoc": "CHIA",
+      "reg": "MA323178",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.6645
+    },
+    {
+      "type": "parent",
+      "child": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "parent": "TMP-aed3b602-706c-448c-a4fb-03b31fe97d05",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.6673
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85",
+      "stub": true,
+      "name": "JAZX AUDREY 352N",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.6768
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85",
+      "assoc": "CHIA",
+      "reg": "303231",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.68
+    },
+    {
+      "type": "parent",
+      "child": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "parent": "TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85",
+      "role": "DAM",
+      "new": true,
+      "t": 0.6818
+    },
+    {
+      "type": "record_end",
+      "index": 2,
+      "uid": "TMP-4317f037-2249-4661-8851-2254e898326e",
+      "stats": {
+        "records": 3,
+        "animals": 7,
+        "merges": {
+          "intl_id": 0,
+          "registration": 2,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.6838
+    },
+    {
+      "type": "record_start",
+      "index": 3,
+      "assoc": "CHIA",
+      "reg": "MA242107",
+      "name": "NBH POLLED ENERGIZER 688",
+      "intl_id": "RDPCANM000000040472",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA242107",
+      "t": 0.6857
+    },
+    {
+      "type": "animal",
+      "uid": "RDPCANM000000040472",
+      "stub": false,
+      "name": "NBH POLLED ENERGIZER 688",
+      "sex": "M",
+      "dob": "1995-03-14",
+      "color": "Black",
+      "horn": "Polled",
+      "intl_id": "RDPCANM000000040472",
+      "tattoo": "LE: NBH688E NBH688E",
+      "t": 0.702
+    },
+    {
+      "type": "registration",
+      "uid": "RDPCANM000000040472",
+      "assoc": "CHIA",
+      "reg": "MA242107",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 10.0,
+        "BW": 2.0,
+        "WW": 51.0,
+        "YW": 77.0,
+        "MILK": 10.0,
+        "TM": 36.0,
+        "CEM": 6.0,
+        "STAY": 8.0,
+        "DOC": 9.9,
+        "YG": -0.59,
+        "CW": 10.0,
+        "CREA": 0.92,
+        "MARB": 0.03,
+        "CFAT": -0.12,
+        "API": 107.07,
+        "TI": 69.42
+      },
+      "attributes": {
+        "coi": "3.22%",
+        "service_type": "Embryo Transfer",
+        "registry_status": "Active",
+        "chianina_percent": "FB Classification: I",
+        "pedigree_ancestors": 17,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA242107",
+      "t": 0.7366
+    },
+    {
+      "type": "breed",
+      "uid": "RDPCANM000000040472",
+      "code": "MA",
+      "percent": 100.0,
+      "new": true,
+      "t": 0.7401
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176",
+      "stub": true,
+      "name": "JF WAR CHIEF",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.7524
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176",
+      "assoc": "CHIA",
+      "reg": "MA185219",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.7577
+    },
+    {
+      "type": "parent",
+      "child": "RDPCANM000000040472",
+      "parent": "TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.7598
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-282b56d7-1506-42b3-b3b4-35605a60a39b",
+      "stub": true,
+      "name": "DUKES MARVELLA 88X",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.7776
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-282b56d7-1506-42b3-b3b4-35605a60a39b",
+      "assoc": "CHIA",
+      "reg": "MA22307",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.7811
+    },
+    {
+      "type": "parent",
+      "child": "RDPCANM000000040472",
+      "parent": "TMP-282b56d7-1506-42b3-b3b4-35605a60a39b",
+      "role": "DAM",
+      "new": true,
+      "t": 0.7828
+    },
+    {
+      "type": "record_end",
+      "index": 3,
+      "uid": "RDPCANM000000040472",
+      "stats": {
+        "records": 4,
+        "animals": 10,
+        "merges": {
+          "intl_id": 0,
+          "registration": 2,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.7846
+    },
+    {
+      "type": "record_start",
+      "index": 4,
+      "assoc": "CHIA",
+      "reg": "MA264806",
+      "name": "DCC THE MAN",
+      "intl_id": "RDPUSAM000000264806",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA264806",
+      "t": 0.7866
+    },
+    {
+      "type": "animal",
+      "uid": "RDPUSAM000000264806",
+      "stub": false,
+      "name": "DCC THE MAN",
+      "sex": "M",
+      "dob": "1999-03-01",
+      "color": null,
+      "horn": null,
+      "intl_id": "RDPUSAM000000264806",
+      "tattoo": "LE: 115J",
+      "t": 0.8024
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000264806",
+      "assoc": "CHIA",
+      "reg": "MA264806",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 17.0,
+        "BW": -1.6,
+        "WW": 41.0,
+        "YW": 56.0,
+        "MILK": 13.0,
+        "TM": 33.0,
+        "CEM": 9.0,
+        "STAY": 8.0,
+        "DOC": 11.9,
+        "YG": -0.52,
+        "CW": 12.0,
+        "CREA": 0.98,
+        "MARB": 0.05,
+        "CFAT": -0.09,
+        "API": 119.71,
+        "TI": 69.01
+      },
+      "attributes": {
+        "coi": "2.31%",
+        "service_type": "Artificial Insemination",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 22,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA264806",
+      "t": 0.8421
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000264806",
+      "code": "MA",
+      "percent": 100.0,
+      "new": true,
+      "t": 0.8454
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000264806",
+      "code": "PHA",
+      "status": "F",
+      "new": true,
+      "t": 0.8479
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000264806",
+      "code": "TH",
+      "status": "F",
+      "new": true,
+      "t": 0.8502
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000264806",
+      "assoc": "MAINE",
+      "reg": "264806",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.8543
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000264806",
+      "parent": "RDPCANM000000040472",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.8578
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "stub": true,
+      "name": "FJD PLAYMATE 7051G",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.8723
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "assoc": "CHIA",
+      "reg": "MA238367",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.8765
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000264806",
+      "parent": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "role": "DAM",
+      "new": true,
+      "t": 0.8787
+    },
+    {
+      "type": "record_end",
+      "index": 4,
+      "uid": "RDPUSAM000000264806",
+      "stats": {
+        "records": 5,
+        "animals": 12,
+        "merges": {
+          "intl_id": 0,
+          "registration": 2,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.8806
+    },
+    {
+      "type": "record_start",
+      "index": 5,
+      "assoc": "CHIA",
+      "reg": "MA238367",
+      "name": "FJD PLAYMATE 7051G",
+      "intl_id": "RDPUSAF000000238367",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA238367",
+      "t": 0.8823
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "via": "registration",
+      "t": 0.889
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "gained": {
+        "intl_id": "RDPUSAF000000238367",
+        "sex": "F"
+      },
+      "name": "FJD PLAYMATE 7051G",
+      "color": null,
+      "horn": null,
+      "sex": "F",
+      "dob": null,
+      "intl_id": "RDPUSAF000000238367",
+      "t": 0.8984
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "assoc": "CHIA",
+      "reg": "MA238367",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 13.0,
+        "BW": 0.8,
+        "WW": 43.0,
+        "YW": 55.0,
+        "MILK": 15.0,
+        "TM": 37.0,
+        "CEM": 5.0,
+        "STAY": 8.0,
+        "DOC": 9.8,
+        "YG": -0.47,
+        "CW": 24.0,
+        "CREA": 0.97,
+        "MARB": 0.05,
+        "CFAT": -0.09,
+        "API": 109.12,
+        "TI": 66.27
+      },
+      "attributes": {
+        "coi": "0.57%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 16,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA238367",
+      "t": 0.9312
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "code": "MA",
+      "percent": 75.0,
+      "new": true,
+      "t": 0.9346
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "code": "AN",
+      "percent": 21.95,
+      "new": true,
+      "t": 0.9367
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "code": "XX",
+      "percent": 3.05,
+      "new": true,
+      "t": 0.9386
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "assoc": "MAINE",
+      "reg": "238367",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.9437
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8",
+      "stub": true,
+      "name": "MCG HEISMAN 44E",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.9542
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8",
+      "assoc": "CHIA",
+      "reg": "MA213912",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.9579
+    },
+    {
+      "type": "parent",
+      "child": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "parent": "TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8",
+      "role": "SIRE",
+      "new": true,
+      "t": 0.96
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991",
+      "stub": true,
+      "name": "MISS FJD 307X",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 0.9682
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991",
+      "assoc": "CHIA",
+      "reg": "MA202543",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 0.9712
+    },
+    {
+      "type": "parent",
+      "child": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "parent": "TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991",
+      "role": "DAM",
+      "new": true,
+      "t": 0.9729
+    },
+    {
+      "type": "record_end",
+      "index": 5,
+      "uid": "TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f",
+      "stats": {
+        "records": 6,
+        "animals": 14,
+        "merges": {
+          "intl_id": 0,
+          "registration": 3,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 0.9746
+    },
+    {
+      "type": "record_start",
+      "index": 6,
+      "assoc": "CHIA",
+      "reg": "422338",
+      "name": "GVC STATESMAN 4R ET",
+      "intl_id": "RDPUSAM0000MA351746",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422338",
+      "t": 0.9765
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "via": "registration",
+      "t": 0.983
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "gained": {
+        "intl_id": "RDPUSAM0000MA351746",
+        "sex": "M",
+        "dob": "2005-03-01",
+        "tattoo": "RE: 4R",
+        "color": "Black",
+        "horn_status": "Polled"
+      },
+      "name": "GVC STATESMAN 4R ET",
+      "color": "Black",
+      "horn": "Polled",
+      "sex": "M",
+      "dob": "2005-03-01",
+      "intl_id": "RDPUSAM0000MA351746",
+      "t": 0.9941
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "assoc": "CHIA",
+      "reg": "422338",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "breeder": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "epds": {
+        "CED": 11.0,
+        "BW": 1.0,
+        "WW": 46.0,
+        "YW": 61.0,
+        "MILK": 12.0,
+        "TM": 34.0,
+        "CEM": 3.0,
+        "STAY": 4.0,
+        "DOC": 10.1,
+        "YG": -0.5,
+        "CW": 15.0,
+        "CREA": 0.92,
+        "MARB": 0.05,
+        "CFAT": -0.09,
+        "API": 100.49,
+        "TI": 67.15
+      },
+      "attributes": {
+        "coi": "4.27%",
+        "service_type": "Embryo Transfer",
+        "registry_status": "Active",
+        "chianina_percent": "0.69",
+        "pedigree_ancestors": 27,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422338",
+      "t": 1.025
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "CA",
+      "percent": 0.685,
+      "new": true,
+      "t": 1.0286
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "AN",
+      "percent": 7.813,
+      "new": true,
+      "t": 1.0307
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "MA",
+      "percent": 89.453,
+      "new": true,
+      "t": 1.0326
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "XX",
+      "percent": 2.053,
+      "new": true,
+      "t": 1.0345
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "AM",
+      "status": "S",
+      "new": true,
+      "t": 1.0368
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 1.0385
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "NH",
+      "status": "S",
+      "new": true,
+      "t": 1.0405
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "PHA",
+      "status": "F",
+      "new": true,
+      "t": 1.0429
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "code": "TH",
+      "status": "F",
+      "new": true,
+      "t": 1.0446
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "assoc": "MAINE",
+      "reg": "351746",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.0498
+    },
+    {
+      "type": "parent",
+      "child": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "parent": "RDPUSAM000000264806",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.0531
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "stub": true,
+      "name": "GVC JAZZMYN 001L",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.0653
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "assoc": "CHIA",
+      "reg": "422337",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.0696
+    },
+    {
+      "type": "parent",
+      "child": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "parent": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "role": "DAM",
+      "new": true,
+      "t": 1.0718
+    },
+    {
+      "type": "record_end",
+      "index": 6,
+      "uid": "TMP-8f356437-0381-4e39-bf98-d515e7f9edde",
+      "stats": {
+        "records": 7,
+        "animals": 15,
+        "merges": {
+          "intl_id": 0,
+          "registration": 4,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.0737
+    },
+    {
+      "type": "record_start",
+      "index": 7,
+      "assoc": "CHIA",
+      "reg": "333396",
+      "name": "DVMM JAZZ",
+      "intl_id": "RDPUSAM000000247388",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=333396",
+      "t": 1.0754
+    },
+    {
+      "type": "animal",
+      "uid": "RDPUSAM000000247388",
+      "stub": false,
+      "name": "DVMM JAZZ",
+      "sex": "M",
+      "dob": "1998-03-06",
+      "color": "Black",
+      "horn": "Horned",
+      "intl_id": "RDPUSAM000000247388",
+      "tattoo": "DVMM LE: 11H",
+      "t": 1.0901
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000247388",
+      "assoc": "CHIA",
+      "reg": "333396",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) STEVE STAIR ( 63283 )",
+      "breeder": "(N) DONNIE & VIKI MCLAIN ( 5184 )",
+      "epds": {
+        "CED": 6.0,
+        "BW": 3.0,
+        "WW": 33.0,
+        "YW": 41.0,
+        "MILK": 14.0,
+        "TM": 30.0,
+        "CEM": -4.0,
+        "STAY": -2.0,
+        "DOC": 5.9,
+        "YG": -0.29,
+        "CW": 14.0,
+        "CREA": 0.68,
+        "MARB": 0.17,
+        "CFAT": -0.04,
+        "API": 78.63,
+        "TI": 58.36
+      },
+      "attributes": {
+        "coi": "2.56%",
+        "service_type": "Artificial Insemination",
+        "registry_status": "Active",
+        "chianina_percent": "2.73 Classification: 1CM",
+        "pedigree_ancestors": 22,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=333396",
+      "t": 1.1223
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000247388",
+      "code": "CA",
+      "percent": 2.73,
+      "new": true,
+      "t": 1.1258
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000247388",
+      "code": "MA",
+      "percent": 64.06,
+      "new": true,
+      "t": 1.128
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000247388",
+      "code": "AN",
+      "percent": 31.25,
+      "new": true,
+      "t": 1.13
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000247388",
+      "code": "XX",
+      "percent": 1.96,
+      "new": true,
+      "t": 1.1319
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000247388",
+      "code": "AM",
+      "status": "S",
+      "new": true,
+      "t": 1.134
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000247388",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 1.1357
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000247388",
+      "code": "NH",
+      "status": "S",
+      "new": true,
+      "t": 1.1373
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000247388",
+      "assoc": "MAINE",
+      "reg": "247388",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.1423
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-d054aba4-79f4-48e0-93a6-474a752542a5",
+      "stub": true,
+      "name": "FGJ HABANERO",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.1533
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-d054aba4-79f4-48e0-93a6-474a752542a5",
+      "assoc": "CHIA",
+      "reg": "264745",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.1568
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000247388",
+      "parent": "TMP-d054aba4-79f4-48e0-93a6-474a752542a5",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.159
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf",
+      "stub": true,
+      "name": "DVMM 9611",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.1668
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf",
+      "assoc": "CHIA",
+      "reg": "MA247276",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.1734
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000247388",
+      "parent": "TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf",
+      "role": "DAM",
+      "new": true,
+      "t": 1.1754
+    },
+    {
+      "type": "record_end",
+      "index": 7,
+      "uid": "RDPUSAM000000247388",
+      "stats": {
+        "records": 8,
+        "animals": 18,
+        "merges": {
+          "intl_id": 0,
+          "registration": 4,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.177
+    },
+    {
+      "type": "record_start",
+      "index": 8,
+      "assoc": "CHIA",
+      "reg": "422337",
+      "name": "GVC JAZZMYN 001L",
+      "intl_id": "RDPUSAF0000MA286130",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422337",
+      "t": 1.1788
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "via": "registration",
+      "t": 1.1842
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "gained": {
+        "intl_id": "RDPUSAF0000MA286130",
+        "sex": "F",
+        "dob": "2001-01-04"
+      },
+      "name": "GVC JAZZMYN 001L",
+      "color": null,
+      "horn": null,
+      "sex": "F",
+      "dob": "2001-01-04",
+      "intl_id": "RDPUSAF0000MA286130",
+      "t": 1.194
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "assoc": "CHIA",
+      "reg": "422337",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "breeder": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "epds": {
+        "CED": 6.0,
+        "BW": 3.1,
+        "WW": 43.0,
+        "YW": 56.0,
+        "MILK": 10.0,
+        "TM": 32.0,
+        "CEM": -3.0,
+        "STAY": 0.0,
+        "DOC": 7.8,
+        "YG": -0.48,
+        "CW": 16.0,
+        "CREA": 0.88,
+        "MARB": 0.02,
+        "CFAT": -0.09,
+        "API": 80.26,
+        "TI": 61.25
+      },
+      "attributes": {
+        "coi": "6.09%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "1.37 Classification: 1CM",
+        "pedigree_ancestors": 28,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422337",
+      "t": 1.224
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "CA",
+      "percent": 1.365,
+      "new": true,
+      "t": 1.2277
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "AN",
+      "percent": 15.625,
+      "new": true,
+      "t": 1.23
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "MA",
+      "percent": 78.905,
+      "new": true,
+      "t": 1.232
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "XX",
+      "percent": 4.105,
+      "new": true,
+      "t": 1.235
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "AM",
+      "status": "S",
+      "new": true,
+      "t": 1.2896
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "DD",
+      "status": "S",
+      "new": true,
+      "t": 1.2928
+    },
+    {
+      "type": "defect",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "code": "NH",
+      "status": "S",
+      "new": true,
+      "t": 1.2946
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "assoc": "MAINE",
+      "reg": "286130",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.299
+    },
+    {
+      "type": "parent",
+      "child": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "parent": "RDPUSAM000000247388",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.3026
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "stub": true,
+      "name": "GREEN VALLEY EVE 501E",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.314
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "assoc": "CHIA",
+      "reg": "MA214871",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.3173
+    },
+    {
+      "type": "parent",
+      "child": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "parent": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "role": "DAM",
+      "new": true,
+      "t": 1.3193
+    },
+    {
+      "type": "record_end",
+      "index": 8,
+      "uid": "TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0",
+      "stats": {
+        "records": 9,
+        "animals": 19,
+        "merges": {
+          "intl_id": 0,
+          "registration": 5,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.321
+    },
+    {
+      "type": "record_start",
+      "index": 9,
+      "assoc": "CHIA",
+      "reg": "MA214871",
+      "name": "GREEN VALLEY EVE 501E",
+      "intl_id": "RDPUSAF000000214871",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA214871",
+      "t": 1.3228
+    },
+    {
+      "type": "merge",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "via": "registration",
+      "t": 1.3281
+    },
+    {
+      "type": "enrich",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "gained": {
+        "intl_id": "RDPUSAF000000214871",
+        "sex": "F",
+        "dob": "1995-03-24",
+        "tattoo": "RE: 501E LE: DGW",
+        "color": "Black",
+        "horn_status": "Polled"
+      },
+      "name": "GREEN VALLEY EVE 501E",
+      "color": "Black",
+      "horn": "Polled",
+      "sex": "F",
+      "dob": "1995-03-24",
+      "intl_id": "RDPUSAF000000214871",
+      "t": 1.3374
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "assoc": "CHIA",
+      "reg": "MA214871",
+      "new": false,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "breeder": "(N) GREEN VALLEY CATTLE ( 22923 )",
+      "epds": {
+        "CED": 8.0,
+        "BW": 3.0,
+        "WW": 49.0,
+        "YW": 65.0,
+        "MILK": 6.0,
+        "TM": 31.0,
+        "CEM": -1.0,
+        "STAY": 12.0,
+        "DOC": 9.5,
+        "YG": -0.67,
+        "CW": 19.0,
+        "CREA": 1.1,
+        "MARB": -0.13,
+        "CFAT": -0.14,
+        "API": 100.34,
+        "TI": 62.22
+      },
+      "attributes": {
+        "coi": "4.03%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 22,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA214871",
+      "t": 1.3687
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "code": "MA",
+      "percent": 93.75,
+      "new": true,
+      "t": 1.3721
+    },
+    {
+      "type": "breed",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "code": "XX",
+      "percent": 6.25,
+      "new": true,
+      "t": 1.3743
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "assoc": "MAINE",
+      "reg": "214871",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.3823
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b",
+      "stub": true,
+      "name": "PLD PURSUIT",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.3936
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b",
+      "assoc": "CHIA",
+      "reg": "MA157403",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.3977
+    },
+    {
+      "type": "parent",
+      "child": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "parent": "TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.4
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a",
+      "stub": true,
+      "name": "GREEN VALLEY JERRI",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.4093
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a",
+      "assoc": "CHIA",
+      "reg": "MA175515",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.4123
+    },
+    {
+      "type": "parent",
+      "child": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "parent": "TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a",
+      "role": "DAM",
+      "new": true,
+      "t": 1.4142
+    },
+    {
+      "type": "record_end",
+      "index": 9,
+      "uid": "TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa",
+      "stats": {
+        "records": 10,
+        "animals": 21,
+        "merges": {
+          "intl_id": 0,
+          "registration": 6,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.4157
+    },
+    {
+      "type": "record_start",
+      "index": 10,
+      "assoc": "CHIA",
+      "reg": "MA221646",
+      "name": "NAGE FAST TRACK 30F ET",
+      "intl_id": "RDPUSAM000000221646",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA221646",
+      "t": 1.4175
+    },
+    {
+      "type": "animal",
+      "uid": "RDPUSAM000000221646",
+      "stub": false,
+      "name": "NAGE FAST TRACK 30F ET",
+      "sex": "M",
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": "RDPUSAM000000221646",
+      "tattoo": "LE: 30F NAGE",
+      "t": 1.4282
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000221646",
+      "assoc": "CHIA",
+      "reg": "MA221646",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 3.0,
+        "BW": 6.7,
+        "WW": 60.0,
+        "YW": 96.0,
+        "MILK": 8.0,
+        "TM": 38.0,
+        "CEM": -3.0,
+        "STAY": 3.0,
+        "DOC": 10.3,
+        "YG": -0.59,
+        "CW": 18.0,
+        "CREA": 0.91,
+        "MARB": -0.17,
+        "CFAT": -0.14,
+        "API": 75.07,
+        "TI": 62.78
+      },
+      "attributes": {
+        "coi": "3.65%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 20,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA221646",
+      "t": 1.4582
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000221646",
+      "code": "MA",
+      "percent": 93.75,
+      "new": true,
+      "t": 1.4617
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000221646",
+      "code": "AN",
+      "percent": 3.65,
+      "new": true,
+      "t": 1.464
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000221646",
+      "code": "XX",
+      "percent": 2.6,
+      "new": true,
+      "t": 1.4663
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000221646",
+      "assoc": "MAINE",
+      "reg": "221646",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.4706
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732",
+      "stub": true,
+      "name": "DJ BULLS EYE B474",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.4805
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732",
+      "assoc": "CHIA",
+      "reg": "MA171351",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.4836
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000221646",
+      "parent": "TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.4857
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432",
+      "stub": true,
+      "name": "NAGE ARETHA 19D",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.4943
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432",
+      "assoc": "CHIA",
+      "reg": "MA200572",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.4979
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000221646",
+      "parent": "TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432",
+      "role": "DAM",
+      "new": true,
+      "t": 1.5
+    },
+    {
+      "type": "record_end",
+      "index": 10,
+      "uid": "RDPUSAM000000221646",
+      "stats": {
+        "records": 11,
+        "animals": 24,
+        "merges": {
+          "intl_id": 0,
+          "registration": 6,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.5015
+    },
+    {
+      "type": "record_start",
+      "index": 11,
+      "assoc": "CHIA",
+      "reg": "MA260105",
+      "name": "NAGE WIDE TRACK 94J",
+      "intl_id": "RDPUSAM000000260105",
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA260105",
+      "t": 1.5034
+    },
+    {
+      "type": "animal",
+      "uid": "RDPUSAM000000260105",
+      "stub": false,
+      "name": "NAGE WIDE TRACK 94J",
+      "sex": "M",
+      "dob": "1999-02-16",
+      "color": null,
+      "horn": "Horned",
+      "intl_id": "RDPUSAM000000260105",
+      "tattoo": null,
+      "t": 1.5161
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000260105",
+      "assoc": "CHIA",
+      "reg": "MA260105",
+      "new": true,
+      "stub": false,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": {
+        "CED": 1.0,
+        "BW": 6.9,
+        "WW": 69.0,
+        "YW": 103.0,
+        "MILK": 11.0,
+        "TM": 45.0,
+        "CEM": -3.0,
+        "STAY": 6.0,
+        "DOC": 12.8,
+        "YG": -0.58,
+        "CW": 24.0,
+        "CREA": 1.19,
+        "MARB": 0.03,
+        "CFAT": -0.1,
+        "API": 90.07,
+        "TI": 72.53
+      },
+      "attributes": {
+        "coi": "2.17%",
+        "service_type": "Natural Service",
+        "registry_status": "Active",
+        "chianina_percent": "0.00",
+        "pedigree_ancestors": 24,
+        "parse_confidence": "fixture-verified (CHIA MA430053)"
+      },
+      "source_url": "https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA260105",
+      "t": 1.5465
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000260105",
+      "code": "MA",
+      "percent": 90.63,
+      "new": true,
+      "t": 1.5501
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000260105",
+      "code": "AN",
+      "percent": 5.73,
+      "new": true,
+      "t": 1.5523
+    },
+    {
+      "type": "breed",
+      "uid": "RDPUSAM000000260105",
+      "code": "XX",
+      "percent": 3.64,
+      "new": true,
+      "t": 1.5543
+    },
+    {
+      "type": "defect",
+      "uid": "RDPUSAM000000260105",
+      "code": "PHA",
+      "status": "S",
+      "new": true,
+      "t": 1.5566
+    },
+    {
+      "type": "registration",
+      "uid": "RDPUSAM000000260105",
+      "assoc": "MAINE",
+      "reg": "260105",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": true,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.5614
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000260105",
+      "parent": "RDPUSAM000000221646",
+      "role": "SIRE",
+      "new": true,
+      "t": 1.5648
+    },
+    {
+      "type": "animal",
+      "uid": "TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8",
+      "stub": true,
+      "name": "NAGE 74E",
+      "sex": null,
+      "dob": null,
+      "color": null,
+      "horn": null,
+      "intl_id": null,
+      "tattoo": null,
+      "t": 1.5742
+    },
+    {
+      "type": "registration",
+      "uid": "TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8",
+      "assoc": "CHIA",
+      "reg": "MA212356",
+      "new": true,
+      "stub": true,
+      "via_cross_ref": false,
+      "owner": null,
+      "breeder": null,
+      "epds": null,
+      "attributes": null,
+      "source_url": null,
+      "t": 1.5771
+    },
+    {
+      "type": "parent",
+      "child": "RDPUSAM000000260105",
+      "parent": "TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8",
+      "role": "DAM",
+      "new": true,
+      "t": 1.5793
+    },
+    {
+      "type": "record_end",
+      "index": 11,
+      "uid": "RDPUSAM000000260105",
+      "stats": {
+        "records": 12,
+        "animals": 26,
+        "merges": {
+          "intl_id": 0,
+          "registration": 6,
+          "dna": 0,
+          "cross_ref": 0,
+          "tattoo_dob_sex": 0,
+          "name_dob": 0
+        }
+      },
+      "t": 1.5812
+    }
+  ]
+}

@@ -1,0 +1,1260 @@
+<title>Constellation — cattle graph loader</title>
+
+<style>
+  :root {
+    /* Night sky over rangeland. Single committed world — every value explicit. */
+    --void:      #070b14;
+    --void-2:    #0a1020;
+    --horizon:   #0e1524;
+    --dust:      #1b2537;
+    --dust-hi:   #2b3a55;
+    --ink:       #c3cee0;
+    --ink-dim:   #71829d;
+    --ink-faint: #48566e;
+
+    /* Star hues carry meaning. */
+    --animal:    #f2f6ff;
+    --animal-h:  #a8c6ff;
+    --reg:       #63c8ff;
+    --assoc:     #f0b95c;
+    --breed:     #7de0a8;
+    --dna:       #b38cff;
+    --free:      #5f7ea6;
+    --carrier:   #ff7a6b;
+    --gold:      #e8c97a;
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-data: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+    --rail: 312px;
+    --bar: 62px;
+    --ledger-h: 0px;   /* measured at runtime; only non-zero in the stacked layout */
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+  }
+
+  .chrome { position: fixed; z-index: 2; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    top: 0; left: 0;
+    padding: 22px 26px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+    max-width: 480px;
+    /* scrim so the type holds over the starfield without boxing it in */
+    background: radial-gradient(120% 100% at 0% 0%,
+      rgba(7,11,20,0.92) 0%, rgba(7,11,20,0.72) 46%, rgba(7,11,20,0) 100%);
+  }
+
+  .masthead h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 27px;
+    font-weight: 400;
+    font-variant: small-caps;
+    letter-spacing: 0.13em;
+    color: #eef3fc;
+    text-wrap: balance;
+  }
+
+  .masthead .lede {
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 12.5px;
+    max-width: 42ch;
+  }
+
+  .source {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 2px;
+  }
+  .source b { color: var(--ink-dim); font-weight: 500; }
+
+  /* ---------- ledger rail ---------- */
+
+  .ledger {
+    top: 0; right: 0; bottom: var(--bar);
+    width: var(--rail);
+    background: linear-gradient(to left, rgba(10,16,32,0.94), rgba(10,16,32,0.72));
+    border-left: 1px solid var(--dust);
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(3px);
+  }
+
+  .rail-label {
+    font-family: var(--font-data);
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint);
+    padding: 16px 18px 9px;
+  }
+
+  .counts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--dust);
+  }
+
+  .count {
+    padding: 9px 18px 10px;
+    border-bottom: 1px solid var(--dust);
+    border-right: 1px solid var(--dust);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .count:nth-child(2n) { border-right: none; }
+
+  .count .n {
+    font-family: var(--font-data);
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    line-height: 1.1;
+    transition: color 220ms ease;
+  }
+  .count.bump .n { color: #fff; }
+
+  .count .k {
+    font-family: var(--font-data);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .count .k::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+
+  .k-animal  { color: var(--animal-h) !important; }
+  .k-reg     { color: var(--reg) !important; }
+  .k-assoc   { color: var(--assoc) !important; }
+  .k-breed   { color: var(--breed) !important; }
+  .k-dna     { color: var(--dna) !important; }
+  .k-defect  { color: var(--carrier) !important; }
+  .k-link    { color: var(--gold) !important; }
+  .k-merge   { color: var(--ink-dim) !important; }
+
+  .log {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 0 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dust-hi) transparent;
+  }
+  .log::-webkit-scrollbar { width: 6px; }
+  .log::-webkit-scrollbar-thumb { background: var(--dust-hi); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 3px 1fr;
+    gap: 10px;
+    padding: 5px 18px 5px 15px;
+    font-size: 11.5px;
+    align-items: start;
+    animation: slip 260ms ease both;
+  }
+  .row .bar { align-self: stretch; background: currentColor; opacity: 0.55; }
+  .row .txt { color: var(--ink); }
+  .row .det {
+    display: block;
+    font-family: var(--font-data);
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    margin-top: 1px;
+  }
+  .row.head { padding-top: 12px; }
+  .row.head .txt {
+    font-family: var(--font-data);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-dim);
+  }
+
+  @keyframes slip { from { opacity: 0; transform: translateY(4px); } }
+
+  /* ---------- legend ---------- */
+
+  /* Status line and legend share one stacked corner so they cannot collide. */
+  .corner {
+    left: 26px; bottom: calc(var(--bar) + 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    pointer-events: none;
+  }
+
+  .key {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    text-shadow: 0 1px 7px rgba(7,11,20,0.95);
+  }
+  .key div { display: flex; align-items: center; gap: 8px; }
+  .key i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 7px currentColor;
+    flex: none;
+  }
+  .key .line i {
+    width: 16px; height: 1px; border-radius: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  /* ---------- transport ---------- */
+
+  .transport {
+    left: 0; right: 0; bottom: 0;
+    height: var(--bar);
+    background: rgba(7,11,20,0.93);
+    border-top: 1px solid var(--dust);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 26px;
+    backdrop-filter: blur(3px);
+  }
+
+  .btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--dust-hi);
+    color: var(--ink);
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 7px 13px;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--gold); color: var(--gold); }
+  .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn.wide { min-width: 78px; text-align: center; }
+
+  .track-wrap { flex: 1; position: relative; height: 26px; display: flex; align-items: center; }
+
+  .track {
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--dust);
+  }
+  .fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(232,201,122,0.35), var(--gold));
+    width: 0%;
+  }
+  .ticks { position: absolute; inset: 0; }
+  .ticks span {
+    position: absolute;
+    top: 50%;
+    width: 1px; height: 11px;
+    margin-top: -5.5px;
+    background: var(--dust-hi);
+  }
+
+  .scrub {
+    position: relative;
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    margin: 0;
+    height: 26px;
+    cursor: pointer;
+  }
+  .scrub:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .scrub::-webkit-slider-thumb {
+    appearance: none;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px rgba(232,201,122,0.8);
+    margin-top: 0;
+  }
+  .scrub::-webkit-slider-runnable-track { height: 11px; background: transparent; }
+  .scrub::-moz-range-thumb {
+    width: 11px; height: 11px; border: none; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px rgba(232,201,122,0.8);
+  }
+  .scrub::-moz-range-track { height: 11px; background: transparent; }
+
+  .readout {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    white-space: nowrap;
+    min-width: 168px;
+    text-align: right;
+  }
+  .readout b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- now-reading + tooltip ---------- */
+
+  .now {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    max-width: 44ch;
+    text-shadow: 0 1px 7px rgba(7,11,20,0.95), 0 0 16px rgba(7,11,20,0.9);
+  }
+  .now.on { opacity: 1; }
+  .now span { color: var(--ink-faint); }
+
+  .tip {
+    position: fixed;
+    z-index: 5;
+    pointer-events: none;
+    background: rgba(10,16,32,0.97);
+    border: 1px solid var(--dust-hi);
+    padding: 9px 12px;
+    max-width: 290px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+  .tip .tt {
+    font-family: var(--font-data);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-faint);
+  }
+  .tip .tn {
+    font-size: 13px;
+    color: #eef3fc;
+    margin: 2px 0 5px;
+    text-wrap: balance;
+  }
+  .tip dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+    font-family: var(--font-data);
+    font-size: 10.5px;
+  }
+  .tip dt { color: var(--ink-faint); }
+  .tip dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row { animation: none; }
+  }
+
+  /* Stacked layout: the sky keeps the top half, the ledger takes the bottom. */
+  @media (max-width: 900px) {
+    :root { --rail: 100%; --bar: 56px; }
+    .ledger {
+      top: auto;
+      height: 42vh;
+      min-height: 260px;
+      border-left: none;
+      border-top: 1px solid var(--dust);
+    }
+    .masthead {
+      max-width: none;
+      padding: 14px 18px 18px;
+      background: linear-gradient(180deg, rgba(7,11,20,0.95) 0%, rgba(7,11,20,0.8) 62%, rgba(7,11,20,0) 100%);
+    }
+    .masthead h1 { font-size: 21px; }
+    .masthead .lede { display: none; }
+    .rail-label { padding: 11px 18px 7px; }
+    .counts { grid-template-columns: repeat(4, 1fr); }
+    .count { padding: 7px 12px 8px; }
+    .count:nth-child(2n) { border-right: 1px solid var(--dust); }
+    .count:nth-child(4n) { border-right: none; }
+    .count .n { font-size: 16px; }
+    .count .k { font-size: 8px; letter-spacing: 0.08em; }
+    .count .k::before { width: 4px; height: 4px; }
+    .key { display: none; }
+    .corner { bottom: calc(var(--ledger-h) + var(--bar) + 14px); left: 18px; }
+    .readout { min-width: 0; font-size: 9.5px; }
+    .transport { padding: 0 14px; gap: 10px; }
+    .btn { padding: 6px 10px; }
+    .btn.wide { min-width: 62px; }
+  }
+</style>
+
+<canvas id="sky"></canvas>
+
+<header class="chrome masthead">
+  <h1>Constellation</h1>
+  <p class="lede">Every animal that survives entity resolution becomes a star. Registrations, breed
+    composition, defect panels and DNA cases orbit it; parentage draws the constellation lines.</p>
+  <div class="source" id="source"></div>
+</header>
+
+<div class="chrome corner">
+  <div class="now" id="now"></div>
+  <div class="key">
+    <div><i style="color:var(--animal-h)"></i> Animal — canonical, post-merge</div>
+    <div><i style="color:var(--reg)"></i> Registration</div>
+    <div><i style="color:var(--assoc)"></i> Association</div>
+    <div><i style="color:var(--breed)"></i> Breed composition</div>
+    <div><i style="color:var(--dna)"></i> DNA case</div>
+    <div><i style="color:var(--carrier)"></i> Defect — free / suspect / carrier</div>
+    <div class="line"><i style="color:var(--gold)"></i> Sire &amp; dam</div>
+  </div>
+</div>
+
+<aside class="chrome ledger">
+  <div class="rail-label">Ledger</div>
+  <div class="counts" id="counts"></div>
+  <div class="rail-label">Load log</div>
+  <div class="log" id="log"></div>
+</aside>
+
+<footer class="chrome transport">
+  <button class="btn wide" id="play" type="button">Pause</button>
+  <button class="btn" id="restart" type="button">Restart</button>
+  <button class="btn" id="speed" type="button">1&times;</button>
+  <div class="track-wrap">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="ticks" id="ticks"></div>
+    <input class="scrub" id="scrub" type="range" min="0" max="1" value="0" step="1"
+           aria-label="Scrub through the load" />
+  </div>
+  <div class="readout" id="readout"></div>
+</footer>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>const DATA = /*__DATA__*/null;</script>
+<script>
+(() => {
+  "use strict";
+
+  const EV = DATA.events;
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- domain vocabulary, so the sky reads in the registry's own words ----
+  const ASSOC = { CHIA: "Chianina", MAINE: "Maine-Anjou", SHORT: "Shorthorn", ANGUS: "Angus",
+                  SIMM: "Simmental", GELB: "Gelbvieh", HERF: "Hereford", RED: "Red Angus",
+                  LIMI: "Limousin", SALERS: "Salers", BRAUN: "Braunvieh" };
+  // Breed codes as they appear in DigitalBeef's "Genetic Makeup" field.
+  const BREED = { MA: "Maine-Anjou", AN: "Angus", SH: "Shorthorn", CA: "Chianina",
+                  SM: "Simmental", GV: "Gelbvieh", HH: "Hereford", LM: "Limousin",
+                  XX: "Unrecorded" };
+  const DEFECT = {
+    TH: "Tibial Hemimelia", PHA: "Pulmonary Hypoplasia w/ Anasarca",
+    CA: "Contractural Arachnodactyly", MSUD: "Maple Syrup Urine Disease",
+    AM: "Arthrogryposis Multiplex", NH: "Neuropathic Hydrocephalus",
+    DD: "Developmental Duplication", DS: "Digital Subluxation",
+    OS: "Osteopetrosis", MYO: "Myostatin", MA: "Alpha-mannosidosis"
+  };
+  // The registry reports a four-level result, not a binary one.
+  const DEFECT_STATUS = {
+    F: { word: "free",     color: "#5f7ea6", rank: 0 },
+    S: { word: "suspect",  color: "#e0996b", rank: 1 },
+    C: { word: "carrier",  color: "#ff7a6b", rank: 2 },
+    A: { word: "affected", color: "#ff4d3d", rank: 3 },
+  };
+  const VIA = {
+    intl_id: "International ID", registration: "an existing registration",
+    dna: "a shared DNA case", cross_ref: "a cross-referenced registration",
+    tattoo_dob_sex: "tattoo + date of birth + sex", name_dob: "name + date of birth"
+  };
+
+  const SPEC = {
+    animal: { r: 6.0, color: "#f2f6ff", halo: "#a8c6ff", label: true },
+    reg:    { r: 3.4, color: "#63c8ff", halo: "#63c8ff" },
+    assoc:  { r: 5.0, color: "#f0b95c", halo: "#f0b95c", label: true },
+    breed:  { r: 4.2, color: "#7de0a8", halo: "#7de0a8", label: true },
+    dna:    { r: 2.8, color: "#b38cff", halo: "#b38cff" },
+    defect: { r: 3.0, color: "#5f7ea6", halo: "#5f7ea6" }
+  };
+  const REST = { has_reg: 74, in_assoc: 62, comp: 96, tested: 74, has_dna: 46, parent: 168 };
+
+  // ---- deterministic randomness so the sky is the same every run ----
+  const mulberry = (a) => () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  let rnd = mulberry(20260812);
+
+  const cv = document.getElementById("sky");
+  const ctx = cv.getContext("2d");
+  let W = 0, H = 0, DPR = 1;
+
+  const NODES = new Map();
+  const LINKS = [];
+  let logRows = [], focusId = null, clock = 0;
+
+  const stats = {
+    animals: 0, registrations: 0, associations: 0, breeds: 0,
+    dna: 0, defects: 0, links: 0, merges: 0
+  };
+  const COUNT_DEFS = [
+    ["animals", "Animals", "k-animal"], ["registrations", "Registrations", "k-reg"],
+    ["associations", "Associations", "k-assoc"], ["breeds", "Breeds", "k-breed"],
+    ["dna", "DNA cases", "k-dna"], ["defects", "Defect tests", "k-defect"],
+    ["links", "Parent links", "k-link"], ["merges", "Records merged", "k-merge"]
+  ];
+
+  // ---------------------------------------------------------------- geometry
+
+  /* The sky is whatever the chrome leaves behind, so measure the chrome rather
+     than hard-coding it — the two layouts then need no separate bookkeeping. */
+  let INSET = { top: 84, bottom: 62, right: 312 };
+  let BLOCKS = [];   // chrome rectangles the stars should stay clear of
+
+  const narrow = () => W < 900;
+  const barH = () => (narrow() ? 56 : 62);
+
+  function measureChrome() {
+    const m = document.querySelector(".masthead").getBoundingClientRect();
+    const led = document.querySelector(".ledger").getBoundingClientRect();
+    const corner = document.querySelector(".corner").getBoundingClientRect();
+    BLOCKS = [m, corner].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }));
+    document.documentElement.style.setProperty(
+      "--ledger-h", (narrow() ? led.height : 0) + "px");
+    INSET = narrow()
+      ? { top: m.height + 12, bottom: led.height + barH(), right: 0 }
+      : { top: 76, bottom: barH(), right: led.width };
+  }
+
+  function fit() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    measureChrome();
+    buildStarfield();
+  }
+
+  const fieldW = () => W - INSET.right;
+  const fieldH = () => H - INSET.bottom;
+  const cx = () => fieldW() / 2;
+  const cy = () => (INSET.top + fieldH()) / 2;
+
+  // ---------------------------------------------------------------- backdrop
+
+  let field = [];
+  function buildStarfield() {
+    const r = mulberry(77003);
+    const n = Math.round((W * H) / 5200);
+    field = [];
+    for (let i = 0; i < n; i++) {
+      field.push({
+        x: r() * W, y: r() * H,
+        r: 0.25 + r() * 0.95,
+        a: 0.12 + r() * 0.45,
+        p: r() * Math.PI * 2,
+        s: 0.4 + r() * 1.5
+      });
+    }
+  }
+
+  function drawBackdrop(t) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#070b14");
+    g.addColorStop(0.55, "#080d19");
+    g.addColorStop(1, "#0a1120");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // two faint washes — the Milky Way band, not a decorative gradient hero
+    const wash = (x, y, rad, col, a) => {
+      const rg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      rg.addColorStop(0, col.replace("A", a));
+      rg.addColorStop(1, col.replace("A", "0"));
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+    };
+    wash(W * 0.26, H * 0.22, Math.max(W, H) * 0.55, "rgba(60,96,170,A)", "0.10");
+    wash(W * 0.78, H * 0.82, Math.max(W, H) * 0.5, "rgba(150,110,190,A)", "0.06");
+
+    for (const s of field) {
+      const tw = REDUCED ? 1 : 0.65 + 0.35 * Math.sin(t / 900 * s.s + s.p);
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = "#dfe9ff";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------- graph ops
+
+  function addNode(id, kind, label, meta, anchorId) {
+    let n = NODES.get(id);
+    if (n) { n.pulse = clock; return n; }
+    const spec = SPEC[kind];
+    const a = anchorId ? NODES.get(anchorId) : null;
+    const ang = rnd() * Math.PI * 2;
+    const rad = 40 + rnd() * 50;
+    n = {
+      id, kind, label, meta: meta || {},
+      x: (a ? a.x : cx() + (rnd() - 0.5) * 120) + Math.cos(ang) * rad,
+      y: (a ? a.y : cy() + (rnd() - 0.5) * 120) + Math.sin(ang) * rad,
+      vx: 0, vy: 0,
+      r: spec.r, color: spec.color, halo: spec.halo,
+      showLabel: !!spec.label,
+      born: clock, pulse: -1e9,
+      tw: rnd() * 6.283, stub: false
+    };
+    NODES.set(id, n);
+    return n;
+  }
+
+  function addLink(aId, bId, kind, meta) {
+    const a = NODES.get(aId), b = NODES.get(bId);
+    if (!a || !b) return null;
+    const hit = LINKS.find((l) => l.kind === kind &&
+      ((l.a === a && l.b === b) || (l.a === b && l.b === a)));
+    if (hit) return hit;
+    const l = { a, b, kind, meta: meta || {}, born: clock, rest: REST[kind] || 80 };
+    LINKS.push(l);
+    return l;
+  }
+
+  const animalId = (uid) => "A:" + uid;
+  const nodeName = (uid) => {
+    const n = NODES.get(animalId(uid));
+    return (n && n.label) || "unnamed animal";
+  };
+
+  // ---------------------------------------------------------------- log
+
+  function push(kind, txt, det, head) {
+    logRows.push({ kind, txt, det, head });
+    if (logRows.length > 220) logRows.shift();
+  }
+
+  const LOG_COLOR = {
+    record: "#e8c97a", animal: "#a8c6ff", merge: "#c3cee0", reg: "#63c8ff",
+    assoc: "#f0b95c", breed: "#7de0a8", dna: "#b38cff",
+    free: "#5f7ea6", suspect: "#e0996b", carrier: "#ff7a6b", parent: "#e8c97a"
+  };
+
+  // ---------------------------------------------------------------- apply
+
+  function apply(ev) {
+    switch (ev.type) {
+      case "record_start": {
+        const a = ASSOC[ev.assoc] || ev.assoc;
+        push("record", `Record ${ev.index + 1} of ${DATA.summary.records}`,
+             `${a} · ${ev.reg}${ev.name ? " · " + ev.name : ""}`, true);
+        nowLine(`Reading ${a} ${ev.reg}`, ev.name || "");
+        break;
+      }
+
+      case "animal": {
+        const n = addNode(animalId(ev.uid), "animal", ev.name || "(unnamed)", {
+          "Intl ID": ev.intl_id || "—", uid: ev.uid, Sex: ev.sex || "—",
+          Born: ev.dob || "—", Colour: ev.color || "—", Horn: ev.horn || "—",
+          Tattoo: ev.tattoo || "—"
+        });
+        n.stub = !!ev.stub;
+        if (n.stub) { n.r = 4.6; n.color = "#9fb2cf"; n.halo = "#7d97bd"; }
+        focusId = n.id;
+        stats.animals++;
+        push("animal", ev.stub ? `Parent stub — ${n.label}` : `New animal — ${n.label}`,
+             ev.stub ? "referenced as a parent, awaiting its own record" : ev.uid);
+        break;
+      }
+
+      case "enrich": {
+        const n = NODES.get(animalId(ev.uid));
+        if (n) {
+          n.pulse = clock;
+          if (ev.name) n.label = ev.name;
+          Object.assign(n.meta, {
+            "Intl ID": ev.intl_id || n.meta["Intl ID"], Sex: ev.sex || n.meta.Sex,
+            Born: ev.dob || n.meta.Born, Colour: ev.color || n.meta.Colour,
+            Horn: ev.horn || n.meta.Horn
+          });
+          if (n.stub) { n.stub = false; n.r = 6.0; n.color = "#f2f6ff"; n.halo = "#a8c6ff"; }
+          focusId = n.id;
+        }
+        const keys = Object.keys(ev.gained || {}).filter((k) => k !== "name_norm");
+        if (keys.length) push("animal", `Filled in ${keys.join(", ")}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "merge": {
+        const n = NODES.get(animalId(ev.uid));
+        if (n) { n.pulse = clock; n.merged = (n.merged || 0) + 1; focusId = n.id; }
+        stats.merges++;
+        push("merge", `Same animal — merged via ${VIA[ev.via] || ev.via}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "registration": {
+        const id = "R:" + ev.assoc + ":" + ev.reg;
+        const fresh = !NODES.get(id);
+        const meta = { Association: ASSOC[ev.assoc] || ev.assoc, Number: ev.reg };
+        if (ev.owner) meta.Owner = ev.owner;
+        if (ev.breeder) meta.Breeder = ev.breeder;
+        if (ev.epds) meta.EPDs = Object.entries(ev.epds).map(([k, v]) => `${k} ${v}`).join("  ");
+        if (ev.attributes) meta.Extra = Object.keys(ev.attributes).join(", ");
+        const n = addNode(id, "reg", ev.reg, meta, animalId(ev.uid));
+        if (ev.stub) { n.r = 2.6; n.color = "#4d7fa0"; n.halo = "#4d7fa0"; }
+        addLink(animalId(ev.uid), id, "has_reg");
+        if (fresh) stats.registrations++;
+
+        const aid = "S:" + ev.assoc;
+        if (!NODES.get(aid)) {
+          addNode(aid, "assoc", ASSOC[ev.assoc] || ev.assoc, { Code: ev.assoc }, id);
+          stats.associations++;
+        }
+        addLink(id, aid, "in_assoc");
+
+        push("reg", `${ASSOC[ev.assoc] || ev.assoc} ${ev.reg}`,
+             ev.via_cross_ref ? "cross-reference from another association"
+             : ev.stub ? "stub — parent registration"
+             : ev.owner ? "owner " + ev.owner : nodeName(ev.uid));
+        break;
+      }
+
+      case "dna": {
+        const id = "N:" + ev.case;
+        const fresh = !NODES.get(id);
+        addNode(id, "dna", ev.case, { "Case ID": ev.case }, animalId(ev.uid));
+        addLink(animalId(ev.uid), id, "has_dna");
+        if (fresh) stats.dna++;
+        push("dna", `DNA case ${ev.case}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "breed": {
+        const id = "B:" + ev.code;
+        const fresh = !NODES.get(id);
+        addNode(id, "breed", BREED[ev.code] || ev.code, { Code: ev.code }, animalId(ev.uid));
+        const l = addLink(animalId(ev.uid), id, "comp", { percent: ev.percent });
+        if (l) l.meta.percent = ev.percent;
+        if (fresh) stats.breeds++;
+        push("breed", `${+Number(ev.percent).toFixed(2)}% ${BREED[ev.code] || ev.code}`,
+             nodeName(ev.uid));
+        break;
+      }
+
+      case "defect": {
+        const id = "D:" + ev.code;
+        const fresh = !NODES.get(id);
+        const st = DEFECT_STATUS[ev.status] || DEFECT_STATUS.F;
+        const n = addNode(id, "defect", ev.code,
+                          { Defect: DEFECT[ev.code] || ev.code }, animalId(ev.uid));
+        addLink(animalId(ev.uid), id, "tested", { status: ev.status });
+        // a shared locus shows the worst result any animal on it has returned
+        if (st.rank >= (n.severity || 0)) {
+          n.severity = st.rank;
+          n.color = st.color;
+          n.halo = st.color;
+          n.r = 3.0 + st.rank * 0.3;
+        }
+        if (fresh) stats.defects++;
+        push(st.rank >= 2 ? "carrier" : st.rank === 1 ? "suspect" : "free",
+             `${DEFECT[ev.code] || ev.code} — ${st.word}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "parent": {
+        const l = addLink(animalId(ev.parent), animalId(ev.child), "parent", { role: ev.role });
+        if (l && ev.new) stats.links++;
+        push("parent", `${ev.role === "SIRE" ? "Sire" : "Dam"} — ${nodeName(ev.parent)}`,
+             "of " + nodeName(ev.child));
+        break;
+      }
+
+      case "record_end":
+        push("record", "Record complete", nodeName(ev.uid));
+        break;
+    }
+  }
+
+  // ---------------------------------------------------------------- physics
+
+  /* A six-record sample and a real pedigree crawl differ by an order of
+     magnitude in node count, so spacing is derived from how much sky each node
+     can have rather than fixed. */
+  function densityScale() {
+    const n = NODES.size || 1;
+    const area = Math.max(1, (fieldW() - 108) * (fieldH() - INSET.top - 54));
+    return Math.max(0.5, Math.min(1.15, Math.sqrt(area / (n * 3400))));
+  }
+
+  function physics(dt) {
+    const arr = [...NODES.values()];
+    const k = Math.min(dt, 34) / 16;
+    const n = arr.length;
+    const ds = densityScale();
+
+    for (let i = 0; i < n; i++) {
+      const a = arr[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = arr[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1) { dx = (rnd() - 0.5); dy = (rnd() - 0.5); d2 = 1; }
+        const d = Math.sqrt(d2);
+        if (d > 340 * ds) continue;
+        // labelled stars need elbow room for their type, not just their glyph
+        const bulk = (a.showLabel && b.showLabel) ? 2.1 : 1;
+        const f = (2300 * ds * bulk * (a.r + b.r) / 11) / d2 * k;
+        const ux = dx / d, uy = dy / d;
+        a.vx -= ux * f; a.vy -= uy * f;
+        b.vx += ux * f; b.vy += uy * f;
+      }
+    }
+
+    for (const l of LINKS) {
+      const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y;
+      const d = Math.hypot(dx, dy) || 0.01;
+      const stiff = l.kind === "parent" ? 0.012 : 0.021;
+      const f = (d - l.rest * ds) * stiff * k;
+      const ux = dx / d, uy = dy / d;
+      l.a.vx += ux * f; l.a.vy += uy * f;
+      l.b.vx -= ux * f; l.b.vy -= uy * f;
+    }
+
+    const gx = cx(), gy = cy(), pad = 54;
+    const maxX = fieldW() - pad, maxY = fieldH() - pad;
+    const minY = INSET.top + 16;
+    for (const a of arr) {
+      a.vx += (gx - a.x) * 0.0016 * k;
+      a.vy += (gy - a.y) * 0.0016 * k;
+      if (a.x < pad) a.vx += (pad - a.x) * 0.06 * k;
+      if (a.x > maxX) a.vx -= (a.x - maxX) * 0.06 * k;
+      if (a.y < minY) a.vy += (minY - a.y) * 0.06 * k;
+      if (a.y > maxY) a.vy -= (a.y - maxY) * 0.06 * k;
+      for (const b of BLOCKS) pushOut(a, k, b);
+      const damp = Math.pow(0.9, k);
+      a.vx *= damp; a.vy *= damp;
+      a.x += a.vx * k; a.y += a.vy * k;
+      // hard walls: at high node counts the soft push alone loses to repulsion
+      // and stars end up under the ledger rail
+      a.x = Math.min(maxX, Math.max(pad, a.x));
+      a.y = Math.min(maxY, Math.max(minY, a.y));
+    }
+  }
+
+  /* Nudge a star out from behind a block of chrome along the shortest escape. */
+  function pushOut(a, k, rect) {
+    const p = 16;
+    const x0 = rect.x - p, x1 = rect.x + rect.w + p;
+    const y0 = rect.y - p, y1 = rect.y + rect.h + p;
+    if (a.x < x0 || a.x > x1 || a.y < y0 || a.y > y1) return;
+    const right = x1 - a.x, left = a.x - x0, down = y1 - a.y, up = a.y - y0;
+    const m = Math.min(right, left, down, up);
+    if (m === right) a.vx += right * 0.05 * k;
+    else if (m === left) a.vx -= left * 0.05 * k;
+    else if (m === down) a.vy += down * 0.05 * k;
+    else a.vy -= up * 0.05 * k;
+  }
+
+  // ---------------------------------------------------------------- render
+
+  function drawLinks(t) {
+    for (const l of LINKS) {
+      const age = clock - l.born;
+      const p = REDUCED ? 1 : Math.min(1, age / 520);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const x2 = l.a.x + (l.b.x - l.a.x) * ease;
+      const y2 = l.a.y + (l.b.y - l.a.y) * ease;
+
+      if (l.kind === "parent") {
+        ctx.strokeStyle = "rgba(232,201,122,0.42)";
+        ctx.lineWidth = 1.15;
+        ctx.shadowColor = "rgba(232,201,122,0.55)";
+        ctx.shadowBlur = 8;
+      } else if (l.kind === "tested" && l.meta.status && l.meta.status !== "F") {
+        const st = DEFECT_STATUS[l.meta.status] || DEFECT_STATUS.S;
+        ctx.strokeStyle = hexA(st.color, 0.34);
+        ctx.lineWidth = 0.9; ctx.shadowBlur = 0;
+      } else {
+        ctx.strokeStyle = "rgba(126,159,204,0.20)";
+        ctx.lineWidth = 0.75; ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.moveTo(l.a.x, l.a.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      if (!REDUCED && l.kind === "parent" && age < 1700) {
+        const q = (age % 850) / 850;
+        const sx = l.a.x + (l.b.x - l.a.x) * q, sy = l.a.y + (l.b.y - l.a.y) * q;
+        ctx.globalAlpha = 1 - age / 1700;
+        ctx.fillStyle = "#ffe9b0";
+        ctx.beginPath(); ctx.arc(sx, sy, 1.9, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function drawNodes(t) {
+    for (const n of NODES.values()) {
+      const age = clock - n.born;
+      const grow = REDUCED ? 1 : Math.min(1, age / 420);
+      const tw = REDUCED ? 1 : 0.9 + 0.1 * Math.sin(t / 700 + n.tw);
+      const r = n.r * (0.4 + 0.6 * grow) * tw;
+
+      const hg = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5.2);
+      hg.addColorStop(0, hexA(n.halo, 0.42 * grow));
+      hg.addColorStop(0.42, hexA(n.halo, 0.11 * grow));
+      hg.addColorStop(1, hexA(n.halo, 0));
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r * 5.2, 0, 6.283); ctx.fill();
+
+      ctx.fillStyle = n.color;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.283); ctx.fill();
+
+      if (n.kind === "animal" && !n.stub) {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.42, 0, 6.283); ctx.fill();
+      }
+
+      if (!REDUCED && age < 900) ring(n, age / 900, n.halo, r);
+      const pa = clock - n.pulse;
+      if (!REDUCED && pa < 900) ring(n, pa / 900, "#e8c97a", r);
+
+      if (n.id === focusId) {
+        ctx.strokeStyle = "rgba(232,201,122,0.30)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.1, 0, 6.283); ctx.stroke();
+      }
+    }
+  }
+
+  function ring(n, p, color, r) {
+    ctx.strokeStyle = hexA(color, (1 - p) * 0.75);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + p * 34, 0, 6.283);
+    ctx.stroke();
+  }
+
+  /* Animals claim their label slot first; hubs take the next free offset below,
+     above, or further out, and dim rather than collide if the sky is crowded. */
+  function drawLabels() {
+    const mono = getComputedStyle(document.body).getPropertyValue("--font-data");
+    const spaced = "letterSpacing" in ctx;
+    const size = NODES.size > 45 ? 9 : 10;    // a crawled pedigree carries far more type
+    const placed = [];
+    const overlaps = (a, b) =>
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+    const list = [...NODES.values()].filter((n) => n.showLabel)
+      .sort((a, b) => (a.kind === "animal" ? 0 : 1) - (b.kind === "animal" ? 0 : 1));
+
+    for (const n of list) {
+      const age = clock - n.born;
+      const fade = Math.min(1, age / 700);
+      const assoc = n.kind === "assoc";
+      const txt = n.kind === "animal" ? n.label.toUpperCase()
+                : assoc ? n.label.toUpperCase() : n.label;
+
+      ctx.font = (assoc ? size - 0.5 : size) + "px " + mono;
+      if (spaced) ctx.letterSpacing = assoc ? "1.6px" : "0px";
+      const w = ctx.measureText(txt).width;
+
+      const base = n.y + n.r * 2.0 + 4;
+      let y = base, clear = false;
+      for (const dy of [0, -(n.r * 4 + 17), 13, -(n.r * 4 + 30), 26, -(n.r * 4 + 43)]) {
+        const box = { x: n.x - w / 2 - 3, y: base + dy - 2, w: w + 6, h: 16 };
+        if (!placed.some((p) => overlaps(p, box))) { placed.push(box); y = base + dy; clear = true; break; }
+      }
+      if (!clear) placed.push({ x: n.x - w / 2 - 3, y: base - 2, w: w + 6, h: 16 });
+
+      const tint = n.kind === "animal" ? "#dce6f7" : n.halo;
+      ctx.fillStyle = hexA(tint, (clear ? 0.8 : 0.3) * fade);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = "rgba(7,11,20,0.95)";
+      ctx.shadowBlur = 6;
+      ctx.fillText(txt, n.x, y);
+      ctx.shadowBlur = 0;
+    }
+    if (spaced) ctx.letterSpacing = "0px";
+  }
+
+  function hexA(hex, a) {
+    const h = hex.replace("#", "");
+    const v = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+    return `rgba(${(v >> 16) & 255},${(v >> 8) & 255},${v & 255},${a})`;
+  }
+
+  function render(t) {
+    drawBackdrop(t);
+    drawLinks(t);
+    drawNodes(t);
+    drawLabels();
+  }
+
+  // ---------------------------------------------------------------- replay
+
+  const DUR = {
+    record_start: 620, record_end: 300, animal: 340, merge: 480, enrich: 300,
+    registration: 260, dna: 190, breed: 200, defect: 170, parent: 340
+  };
+  const stepFor = (ev) => DUR[ev.type] || 220;
+
+  let cursor = 0, acc = 0, playing = true, speed = 1, dirty = true;
+
+  function advance(dt) {
+    if (!playing || cursor >= EV.length) return;
+    acc += dt * speed;
+    let guard = 0;
+    while (cursor < EV.length && acc >= stepFor(EV[cursor]) && guard++ < 400) {
+      acc -= stepFor(EV[cursor]);
+      apply(EV[cursor]);
+      cursor++;
+      dirty = true;
+    }
+    if (cursor >= EV.length) {
+      playing = false;
+      nowLine("Load complete", `${stats.animals} animals resolved from ${DATA.summary.records} records`);
+      syncTransport();
+    }
+  }
+
+  function reset() {
+    NODES.clear(); LINKS.length = 0; logRows = [];
+    for (const k of Object.keys(stats)) stats[k] = 0;
+    cursor = 0; acc = 0; focusId = null; clock = 0;
+    rnd = mulberry(20260812);
+    dirty = true;
+  }
+
+  function seek(index) {
+    reset();
+    clock = -4000;                       // everything already born, fully drawn
+    for (let i = 0; i < index; i++) apply(EV[i]);
+    cursor = index;
+    clock = 0;
+    for (let i = 0; i < 320; i++) physics(16);
+    dirty = true;
+  }
+
+  // ---------------------------------------------------------------- chrome
+
+  const elCounts = document.getElementById("counts");
+  const elLog = document.getElementById("log");
+  const elFill = document.getElementById("fill");
+  const elScrub = document.getElementById("scrub");
+  const elReadout = document.getElementById("readout");
+  const elPlay = document.getElementById("play");
+  const elSpeed = document.getElementById("speed");
+  const elNow = document.getElementById("now");
+  const elTip = document.getElementById("tip");
+
+  const countEls = {};
+  for (const [key, label, cls] of COUNT_DEFS) {
+    const d = document.createElement("div");
+    d.className = "count";
+    d.innerHTML = `<span class="n">0</span><span class="k ${cls}">${label}</span>`;
+    elCounts.appendChild(d);
+    countEls[key] = { box: d, n: d.querySelector(".n"), last: 0 };
+  }
+
+  function nowLine(main, sub) {
+    elNow.innerHTML = main + (sub ? ` <span>${escapeHtml(sub)}</span>` : "");
+    elNow.classList.add("on");
+  }
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  let lastLogLen = -1;
+  function paintChrome() {
+    for (const [key] of COUNT_DEFS) {
+      const c = countEls[key];
+      if (c.last !== stats[key]) {
+        c.n.textContent = stats[key];
+        c.last = stats[key];
+        c.box.classList.add("bump");
+        setTimeout(() => c.box.classList.remove("bump"), 420);
+      }
+    }
+
+    if (lastLogLen !== logRows.length) {
+      const slice = logRows.slice(-60);
+      elLog.innerHTML = slice.map((r) => {
+        const col = LOG_COLOR[r.kind] || "#71829d";
+        return `<div class="row${r.head ? " head" : ""}" style="color:${col}">` +
+               `<div class="bar"></div><div class="txt">${escapeHtml(r.txt)}` +
+               (r.det ? `<span class="det">${escapeHtml(r.det)}</span>` : "") +
+               `</div></div>`;
+      }).join("");
+      elLog.scrollTop = elLog.scrollHeight;
+      lastLogLen = logRows.length;
+    }
+
+    const pct = (cursor / EV.length) * 100;
+    elFill.style.width = pct.toFixed(2) + "%";
+    if (document.activeElement !== elScrub) elScrub.value = String(cursor);
+    const rec = recordAt(cursor);
+    elReadout.innerHTML = `<b>${cursor}</b> / ${EV.length} events` +
+      ` &nbsp;·&nbsp; record <b>${rec}</b> / ${DATA.summary.records}`;
+  }
+
+  function recordAt(i) {
+    let n = 0;
+    for (let j = 0; j < i && j < EV.length; j++) if (EV[j].type === "record_start") n++;
+    return n;
+  }
+
+  function syncTransport() {
+    elPlay.textContent = cursor >= EV.length ? "Replay" : (playing ? "Pause" : "Play");
+  }
+
+  elPlay.addEventListener("click", () => {
+    if (cursor >= EV.length) { reset(); playing = true; }
+    else playing = !playing;
+    syncTransport();
+  });
+  document.getElementById("restart").addEventListener("click", () => {
+    reset(); playing = true; syncTransport();
+  });
+  const SPEEDS = [0.5, 1, 2, 4];
+  elSpeed.addEventListener("click", () => {
+    speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    elSpeed.innerHTML = (speed === 0.5 ? "0.5" : speed) + "&times;";
+  });
+  elScrub.max = String(EV.length);
+  elScrub.addEventListener("input", () => {
+    playing = false;
+    seek(Number(elScrub.value));
+    syncTransport();
+  });
+
+  // record boundary ticks
+  document.getElementById("ticks").innerHTML = EV.map((e, i) =>
+    e.type === "record_start" ? `<span style="left:${(i / EV.length) * 100}%"></span>` : ""
+  ).join("");
+
+  // source line
+  document.getElementById("source").innerHTML =
+    `<span><b>${escapeHtml(DATA.source)}</b></span>` +
+    `<span>${DATA.summary.records} records</span>` +
+    `<span>real load <b>${DATA.elapsed_ms.toFixed(2)} ms</b></span>` +
+    `<span>${EV.length} graph writes</span>` +
+    `<span>replayed slowly enough to watch</span>`;
+
+  // ---------------------------------------------------------------- hover
+
+  let hover = null;
+  cv.addEventListener("mousemove", (e) => {
+    const x = e.clientX, y = e.clientY;
+    let best = null, bd = 18;
+    for (const n of NODES.values()) {
+      const d = Math.hypot(n.x - x, n.y - y);
+      if (d < Math.max(bd, n.r * 2.2)) { if (!best || d < bd) { best = n; bd = d; } }
+    }
+    hover = best;
+    if (!best) { elTip.hidden = true; return; }
+    const kindLabel = { animal: "Animal", reg: "Registration", assoc: "Association",
+                        breed: "Breed", dna: "DNA case", defect: "Genetic defect" }[best.kind];
+    elTip.innerHTML = `<div class="tt">${kindLabel}${best.stub ? " · stub" : ""}</div>` +
+      `<div class="tn">${escapeHtml(best.label)}</div><dl>` +
+      Object.entries(best.meta).map(([k, v]) =>
+        `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join("") + `</dl>`;
+    elTip.hidden = false;
+    const r = elTip.getBoundingClientRect();
+    elTip.style.left = Math.min(x + 16, window.innerWidth - r.width - 12) + "px";
+    elTip.style.top = Math.min(y + 16, window.innerHeight - r.height - 12) + "px";
+  });
+  cv.addEventListener("mouseleave", () => { hover = null; elTip.hidden = true; });
+
+  // ---------------------------------------------------------------- loop
+
+  window.addEventListener("resize", fit);
+  fit();
+  syncTransport();
+
+  let last = performance.now();
+  let capturing = false;
+
+  function frame(now) {
+    const dt = Math.min(64, now - last);
+    last = now;
+    if (!capturing) step(dt);
+    requestAnimationFrame(frame);
+  }
+
+  /* One simulation step + one painted frame. Driving this on a fixed dt instead
+     of wall-clock is what makes an off-screen recording reproducible. */
+  function step(dt) {
+    clock += dt;
+    advance(dt);
+    physics(dt);
+    render(clock);
+    paintChrome();
+    return cursor;
+  }
+
+  requestAnimationFrame(frame);
+
+  // exposed for frame-accurate capture and for testing
+  window.__constellation = {
+    seek, step,
+    beginCapture() { capturing = true; reset(); playing = true; syncTransport(); },
+    endCapture() { capturing = false; last = performance.now(); },
+    get cursor() { return cursor; },
+    get total() { return EV.length; },
+    get done() { return cursor >= EV.length; },
+    set playing(v) { playing = v; },
+    nodes: NODES, links: LINKS, stats
+  };
+})();
+</script>

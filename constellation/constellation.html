@@ -1,0 +1,1260 @@
+<title>Constellation — cattle graph loader</title>
+
+<style>
+  :root {
+    /* Night sky over rangeland. Single committed world — every value explicit. */
+    --void:      #070b14;
+    --void-2:    #0a1020;
+    --horizon:   #0e1524;
+    --dust:      #1b2537;
+    --dust-hi:   #2b3a55;
+    --ink:       #c3cee0;
+    --ink-dim:   #71829d;
+    --ink-faint: #48566e;
+
+    /* Star hues carry meaning. */
+    --animal:    #f2f6ff;
+    --animal-h:  #a8c6ff;
+    --reg:       #63c8ff;
+    --assoc:     #f0b95c;
+    --breed:     #7de0a8;
+    --dna:       #b38cff;
+    --free:      #5f7ea6;
+    --carrier:   #ff7a6b;
+    --gold:      #e8c97a;
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-data: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+    --rail: 312px;
+    --bar: 62px;
+    --ledger-h: 0px;   /* measured at runtime; only non-zero in the stacked layout */
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+  }
+
+  .chrome { position: fixed; z-index: 2; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    top: 0; left: 0;
+    padding: 22px 26px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+    max-width: 480px;
+    /* scrim so the type holds over the starfield without boxing it in */
+    background: radial-gradient(120% 100% at 0% 0%,
+      rgba(7,11,20,0.92) 0%, rgba(7,11,20,0.72) 46%, rgba(7,11,20,0) 100%);
+  }
+
+  .masthead h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 27px;
+    font-weight: 400;
+    font-variant: small-caps;
+    letter-spacing: 0.13em;
+    color: #eef3fc;
+    text-wrap: balance;
+  }
+
+  .masthead .lede {
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 12.5px;
+    max-width: 42ch;
+  }
+
+  .source {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 2px;
+  }
+  .source b { color: var(--ink-dim); font-weight: 500; }
+
+  /* ---------- ledger rail ---------- */
+
+  .ledger {
+    top: 0; right: 0; bottom: var(--bar);
+    width: var(--rail);
+    background: linear-gradient(to left, rgba(10,16,32,0.94), rgba(10,16,32,0.72));
+    border-left: 1px solid var(--dust);
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(3px);
+  }
+
+  .rail-label {
+    font-family: var(--font-data);
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint);
+    padding: 16px 18px 9px;
+  }
+
+  .counts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--dust);
+  }
+
+  .count {
+    padding: 9px 18px 10px;
+    border-bottom: 1px solid var(--dust);
+    border-right: 1px solid var(--dust);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .count:nth-child(2n) { border-right: none; }
+
+  .count .n {
+    font-family: var(--font-data);
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    line-height: 1.1;
+    transition: color 220ms ease;
+  }
+  .count.bump .n { color: #fff; }
+
+  .count .k {
+    font-family: var(--font-data);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .count .k::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+
+  .k-animal  { color: var(--animal-h) !important; }
+  .k-reg     { color: var(--reg) !important; }
+  .k-assoc   { color: var(--assoc) !important; }
+  .k-breed   { color: var(--breed) !important; }
+  .k-dna     { color: var(--dna) !important; }
+  .k-defect  { color: var(--carrier) !important; }
+  .k-link    { color: var(--gold) !important; }
+  .k-merge   { color: var(--ink-dim) !important; }
+
+  .log {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 0 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dust-hi) transparent;
+  }
+  .log::-webkit-scrollbar { width: 6px; }
+  .log::-webkit-scrollbar-thumb { background: var(--dust-hi); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 3px 1fr;
+    gap: 10px;
+    padding: 5px 18px 5px 15px;
+    font-size: 11.5px;
+    align-items: start;
+    animation: slip 260ms ease both;
+  }
+  .row .bar { align-self: stretch; background: currentColor; opacity: 0.55; }
+  .row .txt { color: var(--ink); }
+  .row .det {
+    display: block;
+    font-family: var(--font-data);
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    margin-top: 1px;
+  }
+  .row.head { padding-top: 12px; }
+  .row.head .txt {
+    font-family: var(--font-data);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-dim);
+  }
+
+  @keyframes slip { from { opacity: 0; transform: translateY(4px); } }
+
+  /* ---------- legend ---------- */
+
+  /* Status line and legend share one stacked corner so they cannot collide. */
+  .corner {
+    left: 26px; bottom: calc(var(--bar) + 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    pointer-events: none;
+  }
+
+  .key {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    text-shadow: 0 1px 7px rgba(7,11,20,0.95);
+  }
+  .key div { display: flex; align-items: center; gap: 8px; }
+  .key i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 7px currentColor;
+    flex: none;
+  }
+  .key .line i {
+    width: 16px; height: 1px; border-radius: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  /* ---------- transport ---------- */
+
+  .transport {
+    left: 0; right: 0; bottom: 0;
+    height: var(--bar);
+    background: rgba(7,11,20,0.93);
+    border-top: 1px solid var(--dust);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 26px;
+    backdrop-filter: blur(3px);
+  }
+
+  .btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--dust-hi);
+    color: var(--ink);
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 7px 13px;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--gold); color: var(--gold); }
+  .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn.wide { min-width: 78px; text-align: center; }
+
+  .track-wrap { flex: 1; position: relative; height: 26px; display: flex; align-items: center; }
+
+  .track {
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--dust);
+  }
+  .fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(232,201,122,0.35), var(--gold));
+    width: 0%;
+  }
+  .ticks { position: absolute; inset: 0; }
+  .ticks span {
+    position: absolute;
+    top: 50%;
+    width: 1px; height: 11px;
+    margin-top: -5.5px;
+    background: var(--dust-hi);
+  }
+
+  .scrub {
+    position: relative;
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    margin: 0;
+    height: 26px;
+    cursor: pointer;
+  }
+  .scrub:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .scrub::-webkit-slider-thumb {
+    appearance: none;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px rgba(232,201,122,0.8);
+    margin-top: 0;
+  }
+  .scrub::-webkit-slider-runnable-track { height: 11px; background: transparent; }
+  .scrub::-moz-range-thumb {
+    width: 11px; height: 11px; border: none; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px rgba(232,201,122,0.8);
+  }
+  .scrub::-moz-range-track { height: 11px; background: transparent; }
+
+  .readout {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    white-space: nowrap;
+    min-width: 168px;
+    text-align: right;
+  }
+  .readout b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- now-reading + tooltip ---------- */
+
+  .now {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    max-width: 44ch;
+    text-shadow: 0 1px 7px rgba(7,11,20,0.95), 0 0 16px rgba(7,11,20,0.9);
+  }
+  .now.on { opacity: 1; }
+  .now span { color: var(--ink-faint); }
+
+  .tip {
+    position: fixed;
+    z-index: 5;
+    pointer-events: none;
+    background: rgba(10,16,32,0.97);
+    border: 1px solid var(--dust-hi);
+    padding: 9px 12px;
+    max-width: 290px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+  .tip .tt {
+    font-family: var(--font-data);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-faint);
+  }
+  .tip .tn {
+    font-size: 13px;
+    color: #eef3fc;
+    margin: 2px 0 5px;
+    text-wrap: balance;
+  }
+  .tip dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+    font-family: var(--font-data);
+    font-size: 10.5px;
+  }
+  .tip dt { color: var(--ink-faint); }
+  .tip dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row { animation: none; }
+  }
+
+  /* Stacked layout: the sky keeps the top half, the ledger takes the bottom. */
+  @media (max-width: 900px) {
+    :root { --rail: 100%; --bar: 56px; }
+    .ledger {
+      top: auto;
+      height: 42vh;
+      min-height: 260px;
+      border-left: none;
+      border-top: 1px solid var(--dust);
+    }
+    .masthead {
+      max-width: none;
+      padding: 14px 18px 18px;
+      background: linear-gradient(180deg, rgba(7,11,20,0.95) 0%, rgba(7,11,20,0.8) 62%, rgba(7,11,20,0) 100%);
+    }
+    .masthead h1 { font-size: 21px; }
+    .masthead .lede { display: none; }
+    .rail-label { padding: 11px 18px 7px; }
+    .counts { grid-template-columns: repeat(4, 1fr); }
+    .count { padding: 7px 12px 8px; }
+    .count:nth-child(2n) { border-right: 1px solid var(--dust); }
+    .count:nth-child(4n) { border-right: none; }
+    .count .n { font-size: 16px; }
+    .count .k { font-size: 8px; letter-spacing: 0.08em; }
+    .count .k::before { width: 4px; height: 4px; }
+    .key { display: none; }
+    .corner { bottom: calc(var(--ledger-h) + var(--bar) + 14px); left: 18px; }
+    .readout { min-width: 0; font-size: 9.5px; }
+    .transport { padding: 0 14px; gap: 10px; }
+    .btn { padding: 6px 10px; }
+    .btn.wide { min-width: 62px; }
+  }
+</style>
+
+<canvas id="sky"></canvas>
+
+<header class="chrome masthead">
+  <h1>Constellation</h1>
+  <p class="lede">Every animal that survives entity resolution becomes a star. Registrations, breed
+    composition, defect panels and DNA cases orbit it; parentage draws the constellation lines.</p>
+  <div class="source" id="source"></div>
+</header>
+
+<div class="chrome corner">
+  <div class="now" id="now"></div>
+  <div class="key">
+    <div><i style="color:var(--animal-h)"></i> Animal — canonical, post-merge</div>
+    <div><i style="color:var(--reg)"></i> Registration</div>
+    <div><i style="color:var(--assoc)"></i> Association</div>
+    <div><i style="color:var(--breed)"></i> Breed composition</div>
+    <div><i style="color:var(--dna)"></i> DNA case</div>
+    <div><i style="color:var(--carrier)"></i> Defect — free / suspect / carrier</div>
+    <div class="line"><i style="color:var(--gold)"></i> Sire &amp; dam</div>
+  </div>
+</div>
+
+<aside class="chrome ledger">
+  <div class="rail-label">Ledger</div>
+  <div class="counts" id="counts"></div>
+  <div class="rail-label">Load log</div>
+  <div class="log" id="log"></div>
+</aside>
+
+<footer class="chrome transport">
+  <button class="btn wide" id="play" type="button">Pause</button>
+  <button class="btn" id="restart" type="button">Restart</button>
+  <button class="btn" id="speed" type="button">1&times;</button>
+  <div class="track-wrap">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="ticks" id="ticks"></div>
+    <input class="scrub" id="scrub" type="range" min="0" max="1" value="0" step="1"
+           aria-label="Scrub through the load" />
+  </div>
+  <div class="readout" id="readout"></div>
+</footer>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>const DATA = {"source":"records.jsonl","elapsed_ms":1.577,"summary":{"records":12,"animals":26,"registrations":36,"associations":2,"breeds":4,"defects":6,"dna_cases":0,"parent_edges":24,"merges":{"intl_id":0,"registration":6,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"animals":[{"uid":"RDPUSAM000000430053","name":"ZNT MOVES LIKE JAGGER","color":null,"horn":null,"registrations":["CHIA:MA430053","MAINE:430053"],"composition":[{"breed":"MA","percent":73.049},{"breed":"AN","percent":19.733},{"breed":"CA","percent":2.881},{"breed":"XX","percent":4.338}],"defects":{"AM":"S","DD":"S","NH":"S","PHA":"F","TH":"F"}},{"uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","name":"GVC SUH 01W","color":null,"horn":null,"registrations":["CHIA:MA402617","MAINE:402617"],"composition":[{"breed":"MA","percent":77.345},{"breed":"AN","percent":18.385},{"breed":"XX","percent":4.27}],"defects":{"AM":"F","CA":"F","DD":"S","NH":"F","PHA":"F","TH":"F"}},{"uid":"TMP-4317f037-2249-4661-8851-2254e898326e","name":"ZNT JENNA 707T","color":"Red","horn":"Polled","registrations":["CHIA:337003"],"composition":[{"breed":"CA","percent":6.44},{"breed":"MA","percent":69.14},{"breed":"AN","percent":23.82},{"breed":"XX","percent":0.6}],"defects":{"AM":"S","DD":"S","NH":"S","PHA":"F","TH":"F"}},{"uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","name":"GVC STATESMAN 4R ET","color":"Black","horn":"Polled","registrations":["CHIA:422338","MAINE:351746"],"composition":[{"breed":"CA","percent":0.685},{"breed":"AN","percent":7.813},{"breed":"MA","percent":89.453},{"breed":"XX","percent":2.053}],"defects":{"AM":"S","DD":"S","NH":"S","PHA":"F","TH":"F"}},{"uid":"TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3","name":"MISS GREEN VALLEY 007K","color":null,"horn":null,"registrations":["CHIA:MA351931"],"composition":[],"defects":{}},{"uid":"TMP-aed3b602-706c-448c-a4fb-03b31fe97d05","name":"CMAC HARD CORE","color":null,"horn":null,"registrations":["CHIA:MA323178"],"composition":[],"defects":{}},{"uid":"TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85","name":"JAZX AUDREY 352N","color":null,"horn":null,"registrations":["CHIA:303231"],"composition":[],"defects":{}},{"uid":"RDPCANM000000040472","name":"NBH POLLED ENERGIZER 688","color":"Black","horn":"Polled","registrations":["CHIA:MA242107"],"composition":[{"breed":"MA","percent":100.0}],"defects":{}},{"uid":"TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176","name":"JF WAR CHIEF","color":null,"horn":null,"registrations":["CHIA:MA185219"],"composition":[],"defects":{}},{"uid":"TMP-282b56d7-1506-42b3-b3b4-35605a60a39b","name":"DUKES MARVELLA 88X","color":null,"horn":null,"registrations":["CHIA:MA22307"],"composition":[],"defects":{}},{"uid":"RDPUSAM000000264806","name":"DCC THE MAN","color":null,"horn":null,"registrations":["CHIA:MA264806","MAINE:264806"],"composition":[{"breed":"MA","percent":100.0}],"defects":{"PHA":"F","TH":"F"}},{"uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","name":"FJD PLAYMATE 7051G","color":null,"horn":null,"registrations":["CHIA:MA238367","MAINE:238367"],"composition":[{"breed":"MA","percent":75.0},{"breed":"AN","percent":21.95},{"breed":"XX","percent":3.05}],"defects":{}},{"uid":"TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8","name":"MCG HEISMAN 44E","color":null,"horn":null,"registrations":["CHIA:MA213912"],"composition":[],"defects":{}},{"uid":"TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991","name":"MISS FJD 307X","color":null,"horn":null,"registrations":["CHIA:MA202543"],"composition":[],"defects":{}},{"uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","name":"GVC JAZZMYN 001L","color":null,"horn":null,"registrations":["CHIA:422337","MAINE:286130"],"composition":[{"breed":"CA","percent":1.365},{"breed":"AN","percent":15.625},{"breed":"MA","percent":78.905},{"breed":"XX","percent":4.105}],"defects":{"AM":"S","DD":"S","NH":"S"}},{"uid":"RDPUSAM000000247388","name":"DVMM JAZZ","color":"Black","horn":"Horned","registrations":["CHIA:333396","MAINE:247388"],"composition":[{"breed":"CA","percent":2.73},{"breed":"MA","percent":64.06},{"breed":"AN","percent":31.25},{"breed":"XX","percent":1.96}],"defects":{"AM":"S","DD":"S","NH":"S"}},{"uid":"TMP-d054aba4-79f4-48e0-93a6-474a752542a5","name":"FGJ HABANERO","color":null,"horn":null,"registrations":["CHIA:264745"],"composition":[],"defects":{}},{"uid":"TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf","name":"DVMM 9611","color":null,"horn":null,"registrations":["CHIA:MA247276"],"composition":[],"defects":{}},{"uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","name":"GREEN VALLEY EVE 501E","color":"Black","horn":"Polled","registrations":["CHIA:MA214871","MAINE:214871"],"composition":[{"breed":"MA","percent":93.75},{"breed":"XX","percent":6.25}],"defects":{}},{"uid":"TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b","name":"PLD PURSUIT","color":null,"horn":null,"registrations":["CHIA:MA157403"],"composition":[],"defects":{}},{"uid":"TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a","name":"GREEN VALLEY JERRI","color":null,"horn":null,"registrations":["CHIA:MA175515"],"composition":[],"defects":{}},{"uid":"RDPUSAM000000221646","name":"NAGE FAST TRACK 30F ET","color":null,"horn":null,"registrations":["CHIA:MA221646","MAINE:221646"],"composition":[{"breed":"MA","percent":93.75},{"breed":"AN","percent":3.65},{"breed":"XX","percent":2.6}],"defects":{}},{"uid":"TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732","name":"DJ BULLS EYE B474","color":null,"horn":null,"registrations":["CHIA:MA171351"],"composition":[],"defects":{}},{"uid":"TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432","name":"NAGE ARETHA 19D","color":null,"horn":null,"registrations":["CHIA:MA200572"],"composition":[],"defects":{}},{"uid":"RDPUSAM000000260105","name":"NAGE WIDE TRACK 94J","color":null,"horn":"Horned","registrations":["CHIA:MA260105","MAINE:260105"],"composition":[{"breed":"MA","percent":90.63},{"breed":"AN","percent":5.73},{"breed":"XX","percent":3.64}],"defects":{"PHA":"S"}},{"uid":"TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8","name":"NAGE 74E","color":null,"horn":null,"registrations":["CHIA:MA212356"],"composition":[],"defects":{}}],"events":[{"type":"record_start","index":0,"assoc":"CHIA","reg":"MA430053","name":"ZNT MOVES LIKE JAGGER","intl_id":"RDPUSAM000000430053","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA430053","t":0.0104},{"type":"animal","uid":"RDPUSAM000000430053","stub":false,"name":"ZNT MOVES LIKE JAGGER","sex":"M","dob":"2011-09-10","color":null,"horn":null,"intl_id":"RDPUSAM000000430053","tattoo":null,"t":0.1738},{"type":"registration","uid":"RDPUSAM000000430053","assoc":"CHIA","reg":"MA430053","new":true,"stub":false,"via_cross_ref":false,"owner":"(N) NATALIE MAI ( 65020 )","breeder":null,"epds":{"CED":10.0,"BW":1.9,"WW":41.0,"YW":55.0,"MILK":13.0,"TM":33.0,"CEM":0.0,"STAY":-3.0,"DOC":9.8,"YG":-0.43,"CW":13.0,"CREA":0.71,"MARB":0.15,"CFAT":-0.09,"API":86.78,"TI":65.51},"attributes":{"coi":"2.05%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"2.88","pedigree_ancestors":27,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA430053","t":0.2674},{"type":"breed","uid":"RDPUSAM000000430053","code":"MA","percent":73.049,"new":true,"t":0.2755},{"type":"breed","uid":"RDPUSAM000000430053","code":"AN","percent":19.733,"new":true,"t":0.2818},{"type":"breed","uid":"RDPUSAM000000430053","code":"CA","percent":2.881,"new":true,"t":0.2846},{"type":"breed","uid":"RDPUSAM000000430053","code":"XX","percent":4.338,"new":true,"t":0.2865},{"type":"defect","uid":"RDPUSAM000000430053","code":"AM","status":"S","new":true,"t":0.2902},{"type":"defect","uid":"RDPUSAM000000430053","code":"DD","status":"S","new":true,"t":0.2932},{"type":"defect","uid":"RDPUSAM000000430053","code":"NH","status":"S","new":true,"t":0.2957},{"type":"defect","uid":"RDPUSAM000000430053","code":"PHA","status":"F","new":true,"t":0.2976},{"type":"defect","uid":"RDPUSAM000000430053","code":"TH","status":"F","new":true,"t":0.2993},{"type":"registration","uid":"RDPUSAM000000430053","assoc":"MAINE","reg":"430053","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.3084},{"type":"animal","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","stub":true,"name":"GVC SUH 01W","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.374},{"type":"registration","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","assoc":"CHIA","reg":"MA402617","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.3809},{"type":"parent","child":"RDPUSAM000000430053","parent":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","role":"SIRE","new":true,"t":0.3849},{"type":"animal","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","stub":true,"name":"ZNT JENNA 707T","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.4037},{"type":"registration","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","assoc":"CHIA","reg":"337003","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.4079},{"type":"parent","child":"RDPUSAM000000430053","parent":"TMP-4317f037-2249-4661-8851-2254e898326e","role":"DAM","new":true,"t":0.4116},{"type":"record_end","index":0,"uid":"RDPUSAM000000430053","stats":{"records":1,"animals":3,"merges":{"intl_id":0,"registration":0,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.4143},{"type":"record_start","index":1,"assoc":"CHIA","reg":"MA402617","name":"GVC SUH 01W","intl_id":"RDPUSAM000000402617","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA402617","t":0.4171},{"type":"merge","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","via":"registration","t":0.431},{"type":"enrich","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","gained":{"intl_id":"RDPUSAM000000402617","sex":"M","dob":"2009-02-16","tattoo":"LE: 01W DGW"},"name":"GVC SUH 01W","color":null,"horn":null,"sex":"M","dob":"2009-02-16","intl_id":"RDPUSAM000000402617","t":0.447},{"type":"registration","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","assoc":"CHIA","reg":"MA402617","new":false,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":2.0,"BW":4.5,"WW":54.0,"YW":76.0,"MILK":12.0,"TM":40.0,"CEM":-4.0,"STAY":-1.0,"DOC":10.7,"YG":-0.39,"CW":15.0,"CREA":0.65,"MARB":0.22,"CFAT":-0.08,"API":85.69,"TI":70.48},"attributes":{"coi":"3.59%","service_type":"Artificial Insemination","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":27,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA402617","t":0.491},{"type":"breed","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"MA","percent":77.345,"new":true,"t":0.4957},{"type":"breed","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"AN","percent":18.385,"new":true,"t":0.4979},{"type":"breed","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"XX","percent":4.27,"new":true,"t":0.4996},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"AM","status":"F","new":true,"t":0.5026},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"CA","status":"F","new":true,"t":0.5043},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"DD","status":"S","new":true,"t":0.5058},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"NH","status":"F","new":true,"t":0.5076},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"PHA","status":"F","new":true,"t":0.5093},{"type":"defect","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","code":"TH","status":"F","new":true,"t":0.5115},{"type":"registration","uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","assoc":"MAINE","reg":"402617","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.5179},{"type":"animal","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","stub":true,"name":"GVC STATESMAN 4R ET","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.5382},{"type":"registration","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","assoc":"CHIA","reg":"422338","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.5425},{"type":"parent","child":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","parent":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","role":"SIRE","new":true,"t":0.5454},{"type":"animal","uid":"TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3","stub":true,"name":"MISS GREEN VALLEY 007K","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.5562},{"type":"registration","uid":"TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3","assoc":"CHIA","reg":"MA351931","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.5604},{"type":"parent","child":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","parent":"TMP-92ec0102-3b4a-45d5-9587-303bcc72d9b3","role":"DAM","new":true,"t":0.5626},{"type":"record_end","index":1,"uid":"TMP-9bce9f50-9849-49fa-a4f2-1ec23fa52c18","stats":{"records":2,"animals":5,"merges":{"intl_id":0,"registration":1,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.5652},{"type":"record_start","index":2,"assoc":"CHIA","reg":"337003","name":"ZNT JENNA 707T","intl_id":"CIAUSAF000000337003","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=337003","t":0.5675},{"type":"merge","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","via":"registration","t":0.5756},{"type":"enrich","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","gained":{"intl_id":"CIAUSAF000000337003","sex":"F","dob":"2007-09-30","tattoo":"ZNT LE: 707T","color":"Red","horn_status":"Polled"},"name":"ZNT JENNA 707T","color":"Red","horn":"Polled","sex":"F","dob":"2007-09-30","intl_id":"CIAUSAF000000337003","t":0.5879},{"type":"registration","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","assoc":"CHIA","reg":"337003","new":false,"stub":false,"via_cross_ref":false,"owner":"(N) RANDY PETTY ( 75420 )","breeder":"(N) ZNT CATTLE CO ( 36694 )","epds":{"CED":10.0,"BW":2.2,"WW":38.0,"YW":49.0,"MILK":14.0,"TM":33.0,"CEM":3.0,"STAY":-2.0,"DOC":8.2,"YG":-0.54,"CW":14.0,"CREA":0.89,"MARB":0.0,"CFAT":-0.11,"API":78.19,"TI":60.3},"attributes":{"coi":"0%","service_type":"Artificial Insemination","registry_status":"Active","chianina_percent":"6.44 Classification: 1CM","pedigree_ancestors":24,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=337003","t":0.6261},{"type":"breed","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"CA","percent":6.44,"new":true,"t":0.6301},{"type":"breed","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"MA","percent":69.14,"new":true,"t":0.6323},{"type":"breed","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"AN","percent":23.82,"new":true,"t":0.634},{"type":"breed","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"XX","percent":0.6,"new":true,"t":0.6357},{"type":"defect","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"AM","status":"S","new":true,"t":0.6382},{"type":"defect","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"DD","status":"S","new":true,"t":0.6399},{"type":"defect","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"NH","status":"S","new":true,"t":0.6415},{"type":"defect","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"PHA","status":"F","new":true,"t":0.6432},{"type":"defect","uid":"TMP-4317f037-2249-4661-8851-2254e898326e","code":"TH","status":"F","new":true,"t":0.6451},{"type":"animal","uid":"TMP-aed3b602-706c-448c-a4fb-03b31fe97d05","stub":true,"name":"CMAC HARD CORE","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.6606},{"type":"registration","uid":"TMP-aed3b602-706c-448c-a4fb-03b31fe97d05","assoc":"CHIA","reg":"MA323178","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.6645},{"type":"parent","child":"TMP-4317f037-2249-4661-8851-2254e898326e","parent":"TMP-aed3b602-706c-448c-a4fb-03b31fe97d05","role":"SIRE","new":true,"t":0.6673},{"type":"animal","uid":"TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85","stub":true,"name":"JAZX AUDREY 352N","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.6768},{"type":"registration","uid":"TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85","assoc":"CHIA","reg":"303231","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.68},{"type":"parent","child":"TMP-4317f037-2249-4661-8851-2254e898326e","parent":"TMP-a5288c1d-abe0-4fec-a9b4-fcdcfe972a85","role":"DAM","new":true,"t":0.6818},{"type":"record_end","index":2,"uid":"TMP-4317f037-2249-4661-8851-2254e898326e","stats":{"records":3,"animals":7,"merges":{"intl_id":0,"registration":2,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.6838},{"type":"record_start","index":3,"assoc":"CHIA","reg":"MA242107","name":"NBH POLLED ENERGIZER 688","intl_id":"RDPCANM000000040472","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA242107","t":0.6857},{"type":"animal","uid":"RDPCANM000000040472","stub":false,"name":"NBH POLLED ENERGIZER 688","sex":"M","dob":"1995-03-14","color":"Black","horn":"Polled","intl_id":"RDPCANM000000040472","tattoo":"LE: NBH688E NBH688E","t":0.702},{"type":"registration","uid":"RDPCANM000000040472","assoc":"CHIA","reg":"MA242107","new":true,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":10.0,"BW":2.0,"WW":51.0,"YW":77.0,"MILK":10.0,"TM":36.0,"CEM":6.0,"STAY":8.0,"DOC":9.9,"YG":-0.59,"CW":10.0,"CREA":0.92,"MARB":0.03,"CFAT":-0.12,"API":107.07,"TI":69.42},"attributes":{"coi":"3.22%","service_type":"Embryo Transfer","registry_status":"Active","chianina_percent":"FB Classification: I","pedigree_ancestors":17,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA242107","t":0.7366},{"type":"breed","uid":"RDPCANM000000040472","code":"MA","percent":100.0,"new":true,"t":0.7401},{"type":"animal","uid":"TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176","stub":true,"name":"JF WAR CHIEF","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.7524},{"type":"registration","uid":"TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176","assoc":"CHIA","reg":"MA185219","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.7577},{"type":"parent","child":"RDPCANM000000040472","parent":"TMP-4935b3b3-d190-4efb-97fb-ea3cf08ea176","role":"SIRE","new":true,"t":0.7598},{"type":"animal","uid":"TMP-282b56d7-1506-42b3-b3b4-35605a60a39b","stub":true,"name":"DUKES MARVELLA 88X","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.7776},{"type":"registration","uid":"TMP-282b56d7-1506-42b3-b3b4-35605a60a39b","assoc":"CHIA","reg":"MA22307","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.7811},{"type":"parent","child":"RDPCANM000000040472","parent":"TMP-282b56d7-1506-42b3-b3b4-35605a60a39b","role":"DAM","new":true,"t":0.7828},{"type":"record_end","index":3,"uid":"RDPCANM000000040472","stats":{"records":4,"animals":10,"merges":{"intl_id":0,"registration":2,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.7846},{"type":"record_start","index":4,"assoc":"CHIA","reg":"MA264806","name":"DCC THE MAN","intl_id":"RDPUSAM000000264806","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA264806","t":0.7866},{"type":"animal","uid":"RDPUSAM000000264806","stub":false,"name":"DCC THE MAN","sex":"M","dob":"1999-03-01","color":null,"horn":null,"intl_id":"RDPUSAM000000264806","tattoo":"LE: 115J","t":0.8024},{"type":"registration","uid":"RDPUSAM000000264806","assoc":"CHIA","reg":"MA264806","new":true,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":17.0,"BW":-1.6,"WW":41.0,"YW":56.0,"MILK":13.0,"TM":33.0,"CEM":9.0,"STAY":8.0,"DOC":11.9,"YG":-0.52,"CW":12.0,"CREA":0.98,"MARB":0.05,"CFAT":-0.09,"API":119.71,"TI":69.01},"attributes":{"coi":"2.31%","service_type":"Artificial Insemination","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":22,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA264806","t":0.8421},{"type":"breed","uid":"RDPUSAM000000264806","code":"MA","percent":100.0,"new":true,"t":0.8454},{"type":"defect","uid":"RDPUSAM000000264806","code":"PHA","status":"F","new":true,"t":0.8479},{"type":"defect","uid":"RDPUSAM000000264806","code":"TH","status":"F","new":true,"t":0.8502},{"type":"registration","uid":"RDPUSAM000000264806","assoc":"MAINE","reg":"264806","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.8543},{"type":"parent","child":"RDPUSAM000000264806","parent":"RDPCANM000000040472","role":"SIRE","new":true,"t":0.8578},{"type":"animal","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","stub":true,"name":"FJD PLAYMATE 7051G","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.8723},{"type":"registration","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","assoc":"CHIA","reg":"MA238367","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.8765},{"type":"parent","child":"RDPUSAM000000264806","parent":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","role":"DAM","new":true,"t":0.8787},{"type":"record_end","index":4,"uid":"RDPUSAM000000264806","stats":{"records":5,"animals":12,"merges":{"intl_id":0,"registration":2,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.8806},{"type":"record_start","index":5,"assoc":"CHIA","reg":"MA238367","name":"FJD PLAYMATE 7051G","intl_id":"RDPUSAF000000238367","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA238367","t":0.8823},{"type":"merge","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","via":"registration","t":0.889},{"type":"enrich","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","gained":{"intl_id":"RDPUSAF000000238367","sex":"F"},"name":"FJD PLAYMATE 7051G","color":null,"horn":null,"sex":"F","dob":null,"intl_id":"RDPUSAF000000238367","t":0.8984},{"type":"registration","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","assoc":"CHIA","reg":"MA238367","new":false,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":13.0,"BW":0.8,"WW":43.0,"YW":55.0,"MILK":15.0,"TM":37.0,"CEM":5.0,"STAY":8.0,"DOC":9.8,"YG":-0.47,"CW":24.0,"CREA":0.97,"MARB":0.05,"CFAT":-0.09,"API":109.12,"TI":66.27},"attributes":{"coi":"0.57%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":16,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA238367","t":0.9312},{"type":"breed","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","code":"MA","percent":75.0,"new":true,"t":0.9346},{"type":"breed","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","code":"AN","percent":21.95,"new":true,"t":0.9367},{"type":"breed","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","code":"XX","percent":3.05,"new":true,"t":0.9386},{"type":"registration","uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","assoc":"MAINE","reg":"238367","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.9437},{"type":"animal","uid":"TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8","stub":true,"name":"MCG HEISMAN 44E","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.9542},{"type":"registration","uid":"TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8","assoc":"CHIA","reg":"MA213912","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.9579},{"type":"parent","child":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","parent":"TMP-e8ec261e-6b93-49a5-ba52-58a5169e9eb8","role":"SIRE","new":true,"t":0.96},{"type":"animal","uid":"TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991","stub":true,"name":"MISS FJD 307X","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":0.9682},{"type":"registration","uid":"TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991","assoc":"CHIA","reg":"MA202543","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":0.9712},{"type":"parent","child":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","parent":"TMP-8357f7e9-c41c-4e46-9a30-fec31c17e991","role":"DAM","new":true,"t":0.9729},{"type":"record_end","index":5,"uid":"TMP-c28d3a97-b0f4-442a-aae7-8f640c2d109f","stats":{"records":6,"animals":14,"merges":{"intl_id":0,"registration":3,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":0.9746},{"type":"record_start","index":6,"assoc":"CHIA","reg":"422338","name":"GVC STATESMAN 4R ET","intl_id":"RDPUSAM0000MA351746","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422338","t":0.9765},{"type":"merge","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","via":"registration","t":0.983},{"type":"enrich","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","gained":{"intl_id":"RDPUSAM0000MA351746","sex":"M","dob":"2005-03-01","tattoo":"RE: 4R","color":"Black","horn_status":"Polled"},"name":"GVC STATESMAN 4R ET","color":"Black","horn":"Polled","sex":"M","dob":"2005-03-01","intl_id":"RDPUSAM0000MA351746","t":0.9941},{"type":"registration","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","assoc":"CHIA","reg":"422338","new":false,"stub":false,"via_cross_ref":false,"owner":"(N) GREEN VALLEY CATTLE ( 22923 )","breeder":"(N) GREEN VALLEY CATTLE ( 22923 )","epds":{"CED":11.0,"BW":1.0,"WW":46.0,"YW":61.0,"MILK":12.0,"TM":34.0,"CEM":3.0,"STAY":4.0,"DOC":10.1,"YG":-0.5,"CW":15.0,"CREA":0.92,"MARB":0.05,"CFAT":-0.09,"API":100.49,"TI":67.15},"attributes":{"coi":"4.27%","service_type":"Embryo Transfer","registry_status":"Active","chianina_percent":"0.69","pedigree_ancestors":27,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422338","t":1.025},{"type":"breed","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"CA","percent":0.685,"new":true,"t":1.0286},{"type":"breed","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"AN","percent":7.813,"new":true,"t":1.0307},{"type":"breed","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"MA","percent":89.453,"new":true,"t":1.0326},{"type":"breed","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"XX","percent":2.053,"new":true,"t":1.0345},{"type":"defect","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"AM","status":"S","new":true,"t":1.0368},{"type":"defect","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"DD","status":"S","new":true,"t":1.0385},{"type":"defect","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"NH","status":"S","new":true,"t":1.0405},{"type":"defect","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"PHA","status":"F","new":true,"t":1.0429},{"type":"defect","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","code":"TH","status":"F","new":true,"t":1.0446},{"type":"registration","uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","assoc":"MAINE","reg":"351746","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.0498},{"type":"parent","child":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","parent":"RDPUSAM000000264806","role":"SIRE","new":true,"t":1.0531},{"type":"animal","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","stub":true,"name":"GVC JAZZMYN 001L","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.0653},{"type":"registration","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","assoc":"CHIA","reg":"422337","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.0696},{"type":"parent","child":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","parent":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","role":"DAM","new":true,"t":1.0718},{"type":"record_end","index":6,"uid":"TMP-8f356437-0381-4e39-bf98-d515e7f9edde","stats":{"records":7,"animals":15,"merges":{"intl_id":0,"registration":4,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.0737},{"type":"record_start","index":7,"assoc":"CHIA","reg":"333396","name":"DVMM JAZZ","intl_id":"RDPUSAM000000247388","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=333396","t":1.0754},{"type":"animal","uid":"RDPUSAM000000247388","stub":false,"name":"DVMM JAZZ","sex":"M","dob":"1998-03-06","color":"Black","horn":"Horned","intl_id":"RDPUSAM000000247388","tattoo":"DVMM LE: 11H","t":1.0901},{"type":"registration","uid":"RDPUSAM000000247388","assoc":"CHIA","reg":"333396","new":true,"stub":false,"via_cross_ref":false,"owner":"(N) STEVE STAIR ( 63283 )","breeder":"(N) DONNIE & VIKI MCLAIN ( 5184 )","epds":{"CED":6.0,"BW":3.0,"WW":33.0,"YW":41.0,"MILK":14.0,"TM":30.0,"CEM":-4.0,"STAY":-2.0,"DOC":5.9,"YG":-0.29,"CW":14.0,"CREA":0.68,"MARB":0.17,"CFAT":-0.04,"API":78.63,"TI":58.36},"attributes":{"coi":"2.56%","service_type":"Artificial Insemination","registry_status":"Active","chianina_percent":"2.73 Classification: 1CM","pedigree_ancestors":22,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=333396","t":1.1223},{"type":"breed","uid":"RDPUSAM000000247388","code":"CA","percent":2.73,"new":true,"t":1.1258},{"type":"breed","uid":"RDPUSAM000000247388","code":"MA","percent":64.06,"new":true,"t":1.128},{"type":"breed","uid":"RDPUSAM000000247388","code":"AN","percent":31.25,"new":true,"t":1.13},{"type":"breed","uid":"RDPUSAM000000247388","code":"XX","percent":1.96,"new":true,"t":1.1319},{"type":"defect","uid":"RDPUSAM000000247388","code":"AM","status":"S","new":true,"t":1.134},{"type":"defect","uid":"RDPUSAM000000247388","code":"DD","status":"S","new":true,"t":1.1357},{"type":"defect","uid":"RDPUSAM000000247388","code":"NH","status":"S","new":true,"t":1.1373},{"type":"registration","uid":"RDPUSAM000000247388","assoc":"MAINE","reg":"247388","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.1423},{"type":"animal","uid":"TMP-d054aba4-79f4-48e0-93a6-474a752542a5","stub":true,"name":"FGJ HABANERO","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.1533},{"type":"registration","uid":"TMP-d054aba4-79f4-48e0-93a6-474a752542a5","assoc":"CHIA","reg":"264745","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.1568},{"type":"parent","child":"RDPUSAM000000247388","parent":"TMP-d054aba4-79f4-48e0-93a6-474a752542a5","role":"SIRE","new":true,"t":1.159},{"type":"animal","uid":"TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf","stub":true,"name":"DVMM 9611","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.1668},{"type":"registration","uid":"TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf","assoc":"CHIA","reg":"MA247276","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.1734},{"type":"parent","child":"RDPUSAM000000247388","parent":"TMP-15ef990b-73ac-4c6b-9b29-23a693e92eaf","role":"DAM","new":true,"t":1.1754},{"type":"record_end","index":7,"uid":"RDPUSAM000000247388","stats":{"records":8,"animals":18,"merges":{"intl_id":0,"registration":4,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.177},{"type":"record_start","index":8,"assoc":"CHIA","reg":"422337","name":"GVC JAZZMYN 001L","intl_id":"RDPUSAF0000MA286130","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422337","t":1.1788},{"type":"merge","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","via":"registration","t":1.1842},{"type":"enrich","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","gained":{"intl_id":"RDPUSAF0000MA286130","sex":"F","dob":"2001-01-04"},"name":"GVC JAZZMYN 001L","color":null,"horn":null,"sex":"F","dob":"2001-01-04","intl_id":"RDPUSAF0000MA286130","t":1.194},{"type":"registration","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","assoc":"CHIA","reg":"422337","new":false,"stub":false,"via_cross_ref":false,"owner":"(N) GREEN VALLEY CATTLE ( 22923 )","breeder":"(N) GREEN VALLEY CATTLE ( 22923 )","epds":{"CED":6.0,"BW":3.1,"WW":43.0,"YW":56.0,"MILK":10.0,"TM":32.0,"CEM":-3.0,"STAY":0.0,"DOC":7.8,"YG":-0.48,"CW":16.0,"CREA":0.88,"MARB":0.02,"CFAT":-0.09,"API":80.26,"TI":61.25},"attributes":{"coi":"6.09%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"1.37 Classification: 1CM","pedigree_ancestors":28,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=422337","t":1.224},{"type":"breed","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"CA","percent":1.365,"new":true,"t":1.2277},{"type":"breed","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"AN","percent":15.625,"new":true,"t":1.23},{"type":"breed","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"MA","percent":78.905,"new":true,"t":1.232},{"type":"breed","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"XX","percent":4.105,"new":true,"t":1.235},{"type":"defect","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"AM","status":"S","new":true,"t":1.2896},{"type":"defect","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"DD","status":"S","new":true,"t":1.2928},{"type":"defect","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","code":"NH","status":"S","new":true,"t":1.2946},{"type":"registration","uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","assoc":"MAINE","reg":"286130","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.299},{"type":"parent","child":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","parent":"RDPUSAM000000247388","role":"SIRE","new":true,"t":1.3026},{"type":"animal","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","stub":true,"name":"GREEN VALLEY EVE 501E","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.314},{"type":"registration","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","assoc":"CHIA","reg":"MA214871","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.3173},{"type":"parent","child":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","parent":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","role":"DAM","new":true,"t":1.3193},{"type":"record_end","index":8,"uid":"TMP-070eca9c-4e0e-4db5-816d-81cbc52bdaf0","stats":{"records":9,"animals":19,"merges":{"intl_id":0,"registration":5,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.321},{"type":"record_start","index":9,"assoc":"CHIA","reg":"MA214871","name":"GREEN VALLEY EVE 501E","intl_id":"RDPUSAF000000214871","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA214871","t":1.3228},{"type":"merge","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","via":"registration","t":1.3281},{"type":"enrich","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","gained":{"intl_id":"RDPUSAF000000214871","sex":"F","dob":"1995-03-24","tattoo":"RE: 501E LE: DGW","color":"Black","horn_status":"Polled"},"name":"GREEN VALLEY EVE 501E","color":"Black","horn":"Polled","sex":"F","dob":"1995-03-24","intl_id":"RDPUSAF000000214871","t":1.3374},{"type":"registration","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","assoc":"CHIA","reg":"MA214871","new":false,"stub":false,"via_cross_ref":false,"owner":"(N) GREEN VALLEY CATTLE ( 22923 )","breeder":"(N) GREEN VALLEY CATTLE ( 22923 )","epds":{"CED":8.0,"BW":3.0,"WW":49.0,"YW":65.0,"MILK":6.0,"TM":31.0,"CEM":-1.0,"STAY":12.0,"DOC":9.5,"YG":-0.67,"CW":19.0,"CREA":1.1,"MARB":-0.13,"CFAT":-0.14,"API":100.34,"TI":62.22},"attributes":{"coi":"4.03%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":22,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA214871","t":1.3687},{"type":"breed","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","code":"MA","percent":93.75,"new":true,"t":1.3721},{"type":"breed","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","code":"XX","percent":6.25,"new":true,"t":1.3743},{"type":"registration","uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","assoc":"MAINE","reg":"214871","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.3823},{"type":"animal","uid":"TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b","stub":true,"name":"PLD PURSUIT","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.3936},{"type":"registration","uid":"TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b","assoc":"CHIA","reg":"MA157403","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.3977},{"type":"parent","child":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","parent":"TMP-30c55048-125d-447a-bb7e-f9ea943f9e9b","role":"SIRE","new":true,"t":1.4},{"type":"animal","uid":"TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a","stub":true,"name":"GREEN VALLEY JERRI","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.4093},{"type":"registration","uid":"TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a","assoc":"CHIA","reg":"MA175515","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.4123},{"type":"parent","child":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","parent":"TMP-8c95cf02-23b3-4e53-951c-ddfccdeb156a","role":"DAM","new":true,"t":1.4142},{"type":"record_end","index":9,"uid":"TMP-2307626c-32a0-4ca4-b66f-7bf159f8daaa","stats":{"records":10,"animals":21,"merges":{"intl_id":0,"registration":6,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.4157},{"type":"record_start","index":10,"assoc":"CHIA","reg":"MA221646","name":"NAGE FAST TRACK 30F ET","intl_id":"RDPUSAM000000221646","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA221646","t":1.4175},{"type":"animal","uid":"RDPUSAM000000221646","stub":false,"name":"NAGE FAST TRACK 30F ET","sex":"M","dob":null,"color":null,"horn":null,"intl_id":"RDPUSAM000000221646","tattoo":"LE: 30F NAGE","t":1.4282},{"type":"registration","uid":"RDPUSAM000000221646","assoc":"CHIA","reg":"MA221646","new":true,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":3.0,"BW":6.7,"WW":60.0,"YW":96.0,"MILK":8.0,"TM":38.0,"CEM":-3.0,"STAY":3.0,"DOC":10.3,"YG":-0.59,"CW":18.0,"CREA":0.91,"MARB":-0.17,"CFAT":-0.14,"API":75.07,"TI":62.78},"attributes":{"coi":"3.65%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":20,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA221646","t":1.4582},{"type":"breed","uid":"RDPUSAM000000221646","code":"MA","percent":93.75,"new":true,"t":1.4617},{"type":"breed","uid":"RDPUSAM000000221646","code":"AN","percent":3.65,"new":true,"t":1.464},{"type":"breed","uid":"RDPUSAM000000221646","code":"XX","percent":2.6,"new":true,"t":1.4663},{"type":"registration","uid":"RDPUSAM000000221646","assoc":"MAINE","reg":"221646","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.4706},{"type":"animal","uid":"TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732","stub":true,"name":"DJ BULLS EYE B474","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.4805},{"type":"registration","uid":"TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732","assoc":"CHIA","reg":"MA171351","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.4836},{"type":"parent","child":"RDPUSAM000000221646","parent":"TMP-64f6c2e4-07b0-4aad-adac-9a211cb92732","role":"SIRE","new":true,"t":1.4857},{"type":"animal","uid":"TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432","stub":true,"name":"NAGE ARETHA 19D","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.4943},{"type":"registration","uid":"TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432","assoc":"CHIA","reg":"MA200572","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.4979},{"type":"parent","child":"RDPUSAM000000221646","parent":"TMP-ff77ee82-aed1-4787-95fd-3cc4d6247432","role":"DAM","new":true,"t":1.5},{"type":"record_end","index":10,"uid":"RDPUSAM000000221646","stats":{"records":11,"animals":24,"merges":{"intl_id":0,"registration":6,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.5015},{"type":"record_start","index":11,"assoc":"CHIA","reg":"MA260105","name":"NAGE WIDE TRACK 94J","intl_id":"RDPUSAM000000260105","source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA260105","t":1.5034},{"type":"animal","uid":"RDPUSAM000000260105","stub":false,"name":"NAGE WIDE TRACK 94J","sex":"M","dob":"1999-02-16","color":null,"horn":"Horned","intl_id":"RDPUSAM000000260105","tattoo":null,"t":1.5161},{"type":"registration","uid":"RDPUSAM000000260105","assoc":"CHIA","reg":"MA260105","new":true,"stub":false,"via_cross_ref":false,"owner":null,"breeder":null,"epds":{"CED":1.0,"BW":6.9,"WW":69.0,"YW":103.0,"MILK":11.0,"TM":45.0,"CEM":-3.0,"STAY":6.0,"DOC":12.8,"YG":-0.58,"CW":24.0,"CREA":1.19,"MARB":0.03,"CFAT":-0.1,"API":90.07,"TI":72.53},"attributes":{"coi":"2.17%","service_type":"Natural Service","registry_status":"Active","chianina_percent":"0.00","pedigree_ancestors":24,"parse_confidence":"fixture-verified (CHIA MA430053)"},"source_url":"https://chianina.digitalbeef.com/modules.php?op=modload&name=_animal&file=_animal&animal_registration=MA260105","t":1.5465},{"type":"breed","uid":"RDPUSAM000000260105","code":"MA","percent":90.63,"new":true,"t":1.5501},{"type":"breed","uid":"RDPUSAM000000260105","code":"AN","percent":5.73,"new":true,"t":1.5523},{"type":"breed","uid":"RDPUSAM000000260105","code":"XX","percent":3.64,"new":true,"t":1.5543},{"type":"defect","uid":"RDPUSAM000000260105","code":"PHA","status":"S","new":true,"t":1.5566},{"type":"registration","uid":"RDPUSAM000000260105","assoc":"MAINE","reg":"260105","new":true,"stub":true,"via_cross_ref":true,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.5614},{"type":"parent","child":"RDPUSAM000000260105","parent":"RDPUSAM000000221646","role":"SIRE","new":true,"t":1.5648},{"type":"animal","uid":"TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8","stub":true,"name":"NAGE 74E","sex":null,"dob":null,"color":null,"horn":null,"intl_id":null,"tattoo":null,"t":1.5742},{"type":"registration","uid":"TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8","assoc":"CHIA","reg":"MA212356","new":true,"stub":true,"via_cross_ref":false,"owner":null,"breeder":null,"epds":null,"attributes":null,"source_url":null,"t":1.5771},{"type":"parent","child":"RDPUSAM000000260105","parent":"TMP-9ffe269c-a6b1-4a97-8475-661d8385b1e8","role":"DAM","new":true,"t":1.5793},{"type":"record_end","index":11,"uid":"RDPUSAM000000260105","stats":{"records":12,"animals":26,"merges":{"intl_id":0,"registration":6,"dna":0,"cross_ref":0,"tattoo_dob_sex":0,"name_dob":0}},"t":1.5812}]};</script>
+<script>
+(() => {
+  "use strict";
+
+  const EV = DATA.events;
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- domain vocabulary, so the sky reads in the registry's own words ----
+  const ASSOC = { CHIA: "Chianina", MAINE: "Maine-Anjou", SHORT: "Shorthorn", ANGUS: "Angus",
+                  SIMM: "Simmental", GELB: "Gelbvieh", HERF: "Hereford", RED: "Red Angus",
+                  LIMI: "Limousin", SALERS: "Salers", BRAUN: "Braunvieh" };
+  // Breed codes as they appear in DigitalBeef's "Genetic Makeup" field.
+  const BREED = { MA: "Maine-Anjou", AN: "Angus", SH: "Shorthorn", CA: "Chianina",
+                  SM: "Simmental", GV: "Gelbvieh", HH: "Hereford", LM: "Limousin",
+                  XX: "Unrecorded" };
+  const DEFECT = {
+    TH: "Tibial Hemimelia", PHA: "Pulmonary Hypoplasia w/ Anasarca",
+    CA: "Contractural Arachnodactyly", MSUD: "Maple Syrup Urine Disease",
+    AM: "Arthrogryposis Multiplex", NH: "Neuropathic Hydrocephalus",
+    DD: "Developmental Duplication", DS: "Digital Subluxation",
+    OS: "Osteopetrosis", MYO: "Myostatin", MA: "Alpha-mannosidosis"
+  };
+  // The registry reports a four-level result, not a binary one.
+  const DEFECT_STATUS = {
+    F: { word: "free",     color: "#5f7ea6", rank: 0 },
+    S: { word: "suspect",  color: "#e0996b", rank: 1 },
+    C: { word: "carrier",  color: "#ff7a6b", rank: 2 },
+    A: { word: "affected", color: "#ff4d3d", rank: 3 },
+  };
+  const VIA = {
+    intl_id: "International ID", registration: "an existing registration",
+    dna: "a shared DNA case", cross_ref: "a cross-referenced registration",
+    tattoo_dob_sex: "tattoo + date of birth + sex", name_dob: "name + date of birth"
+  };
+
+  const SPEC = {
+    animal: { r: 6.0, color: "#f2f6ff", halo: "#a8c6ff", label: true },
+    reg:    { r: 3.4, color: "#63c8ff", halo: "#63c8ff" },
+    assoc:  { r: 5.0, color: "#f0b95c", halo: "#f0b95c", label: true },
+    breed:  { r: 4.2, color: "#7de0a8", halo: "#7de0a8", label: true },
+    dna:    { r: 2.8, color: "#b38cff", halo: "#b38cff" },
+    defect: { r: 3.0, color: "#5f7ea6", halo: "#5f7ea6" }
+  };
+  const REST = { has_reg: 74, in_assoc: 62, comp: 96, tested: 74, has_dna: 46, parent: 168 };
+
+  // ---- deterministic randomness so the sky is the same every run ----
+  const mulberry = (a) => () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  let rnd = mulberry(20260812);
+
+  const cv = document.getElementById("sky");
+  const ctx = cv.getContext("2d");
+  let W = 0, H = 0, DPR = 1;
+
+  const NODES = new Map();
+  const LINKS = [];
+  let logRows = [], focusId = null, clock = 0;
+
+  const stats = {
+    animals: 0, registrations: 0, associations: 0, breeds: 0,
+    dna: 0, defects: 0, links: 0, merges: 0
+  };
+  const COUNT_DEFS = [
+    ["animals", "Animals", "k-animal"], ["registrations", "Registrations", "k-reg"],
+    ["associations", "Associations", "k-assoc"], ["breeds", "Breeds", "k-breed"],
+    ["dna", "DNA cases", "k-dna"], ["defects", "Defect tests", "k-defect"],
+    ["links", "Parent links", "k-link"], ["merges", "Records merged", "k-merge"]
+  ];
+
+  // ---------------------------------------------------------------- geometry
+
+  /* The sky is whatever the chrome leaves behind, so measure the chrome rather
+     than hard-coding it — the two layouts then need no separate bookkeeping. */
+  let INSET = { top: 84, bottom: 62, right: 312 };
+  let BLOCKS = [];   // chrome rectangles the stars should stay clear of
+
+  const narrow = () => W < 900;
+  const barH = () => (narrow() ? 56 : 62);
+
+  function measureChrome() {
+    const m = document.querySelector(".masthead").getBoundingClientRect();
+    const led = document.querySelector(".ledger").getBoundingClientRect();
+    const corner = document.querySelector(".corner").getBoundingClientRect();
+    BLOCKS = [m, corner].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }));
+    document.documentElement.style.setProperty(
+      "--ledger-h", (narrow() ? led.height : 0) + "px");
+    INSET = narrow()
+      ? { top: m.height + 12, bottom: led.height + barH(), right: 0 }
+      : { top: 76, bottom: barH(), right: led.width };
+  }
+
+  function fit() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    measureChrome();
+    buildStarfield();
+  }
+
+  const fieldW = () => W - INSET.right;
+  const fieldH = () => H - INSET.bottom;
+  const cx = () => fieldW() / 2;
+  const cy = () => (INSET.top + fieldH()) / 2;
+
+  // ---------------------------------------------------------------- backdrop
+
+  let field = [];
+  function buildStarfield() {
+    const r = mulberry(77003);
+    const n = Math.round((W * H) / 5200);
+    field = [];
+    for (let i = 0; i < n; i++) {
+      field.push({
+        x: r() * W, y: r() * H,
+        r: 0.25 + r() * 0.95,
+        a: 0.12 + r() * 0.45,
+        p: r() * Math.PI * 2,
+        s: 0.4 + r() * 1.5
+      });
+    }
+  }
+
+  function drawBackdrop(t) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#070b14");
+    g.addColorStop(0.55, "#080d19");
+    g.addColorStop(1, "#0a1120");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // two faint washes — the Milky Way band, not a decorative gradient hero
+    const wash = (x, y, rad, col, a) => {
+      const rg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      rg.addColorStop(0, col.replace("A", a));
+      rg.addColorStop(1, col.replace("A", "0"));
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+    };
+    wash(W * 0.26, H * 0.22, Math.max(W, H) * 0.55, "rgba(60,96,170,A)", "0.10");
+    wash(W * 0.78, H * 0.82, Math.max(W, H) * 0.5, "rgba(150,110,190,A)", "0.06");
+
+    for (const s of field) {
+      const tw = REDUCED ? 1 : 0.65 + 0.35 * Math.sin(t / 900 * s.s + s.p);
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = "#dfe9ff";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------- graph ops
+
+  function addNode(id, kind, label, meta, anchorId) {
+    let n = NODES.get(id);
+    if (n) { n.pulse = clock; return n; }
+    const spec = SPEC[kind];
+    const a = anchorId ? NODES.get(anchorId) : null;
+    const ang = rnd() * Math.PI * 2;
+    const rad = 40 + rnd() * 50;
+    n = {
+      id, kind, label, meta: meta || {},
+      x: (a ? a.x : cx() + (rnd() - 0.5) * 120) + Math.cos(ang) * rad,
+      y: (a ? a.y : cy() + (rnd() - 0.5) * 120) + Math.sin(ang) * rad,
+      vx: 0, vy: 0,
+      r: spec.r, color: spec.color, halo: spec.halo,
+      showLabel: !!spec.label,
+      born: clock, pulse: -1e9,
+      tw: rnd() * 6.283, stub: false
+    };
+    NODES.set(id, n);
+    return n;
+  }
+
+  function addLink(aId, bId, kind, meta) {
+    const a = NODES.get(aId), b = NODES.get(bId);
+    if (!a || !b) return null;
+    const hit = LINKS.find((l) => l.kind === kind &&
+      ((l.a === a && l.b === b) || (l.a === b && l.b === a)));
+    if (hit) return hit;
+    const l = { a, b, kind, meta: meta || {}, born: clock, rest: REST[kind] || 80 };
+    LINKS.push(l);
+    return l;
+  }
+
+  const animalId = (uid) => "A:" + uid;
+  const nodeName = (uid) => {
+    const n = NODES.get(animalId(uid));
+    return (n && n.label) || "unnamed animal";
+  };
+
+  // ---------------------------------------------------------------- log
+
+  function push(kind, txt, det, head) {
+    logRows.push({ kind, txt, det, head });
+    if (logRows.length > 220) logRows.shift();
+  }
+
+  const LOG_COLOR = {
+    record: "#e8c97a", animal: "#a8c6ff", merge: "#c3cee0", reg: "#63c8ff",
+    assoc: "#f0b95c", breed: "#7de0a8", dna: "#b38cff",
+    free: "#5f7ea6", suspect: "#e0996b", carrier: "#ff7a6b", parent: "#e8c97a"
+  };
+
+  // ---------------------------------------------------------------- apply
+
+  function apply(ev) {
+    switch (ev.type) {
+      case "record_start": {
+        const a = ASSOC[ev.assoc] || ev.assoc;
+        push("record", `Record ${ev.index + 1} of ${DATA.summary.records}`,
+             `${a} · ${ev.reg}${ev.name ? " · " + ev.name : ""}`, true);
+        nowLine(`Reading ${a} ${ev.reg}`, ev.name || "");
+        break;
+      }
+
+      case "animal": {
+        const n = addNode(animalId(ev.uid), "animal", ev.name || "(unnamed)", {
+          "Intl ID": ev.intl_id || "—", uid: ev.uid, Sex: ev.sex || "—",
+          Born: ev.dob || "—", Colour: ev.color || "—", Horn: ev.horn || "—",
+          Tattoo: ev.tattoo || "—"
+        });
+        n.stub = !!ev.stub;
+        if (n.stub) { n.r = 4.6; n.color = "#9fb2cf"; n.halo = "#7d97bd"; }
+        focusId = n.id;
+        stats.animals++;
+        push("animal", ev.stub ? `Parent stub — ${n.label}` : `New animal — ${n.label}`,
+             ev.stub ? "referenced as a parent, awaiting its own record" : ev.uid);
+        break;
+      }
+
+      case "enrich": {
+        const n = NODES.get(animalId(ev.uid));
+        if (n) {
+          n.pulse = clock;
+          if (ev.name) n.label = ev.name;
+          Object.assign(n.meta, {
+            "Intl ID": ev.intl_id || n.meta["Intl ID"], Sex: ev.sex || n.meta.Sex,
+            Born: ev.dob || n.meta.Born, Colour: ev.color || n.meta.Colour,
+            Horn: ev.horn || n.meta.Horn
+          });
+          if (n.stub) { n.stub = false; n.r = 6.0; n.color = "#f2f6ff"; n.halo = "#a8c6ff"; }
+          focusId = n.id;
+        }
+        const keys = Object.keys(ev.gained || {}).filter((k) => k !== "name_norm");
+        if (keys.length) push("animal", `Filled in ${keys.join(", ")}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "merge": {
+        const n = NODES.get(animalId(ev.uid));
+        if (n) { n.pulse = clock; n.merged = (n.merged || 0) + 1; focusId = n.id; }
+        stats.merges++;
+        push("merge", `Same animal — merged via ${VIA[ev.via] || ev.via}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "registration": {
+        const id = "R:" + ev.assoc + ":" + ev.reg;
+        const fresh = !NODES.get(id);
+        const meta = { Association: ASSOC[ev.assoc] || ev.assoc, Number: ev.reg };
+        if (ev.owner) meta.Owner = ev.owner;
+        if (ev.breeder) meta.Breeder = ev.breeder;
+        if (ev.epds) meta.EPDs = Object.entries(ev.epds).map(([k, v]) => `${k} ${v}`).join("  ");
+        if (ev.attributes) meta.Extra = Object.keys(ev.attributes).join(", ");
+        const n = addNode(id, "reg", ev.reg, meta, animalId(ev.uid));
+        if (ev.stub) { n.r = 2.6; n.color = "#4d7fa0"; n.halo = "#4d7fa0"; }
+        addLink(animalId(ev.uid), id, "has_reg");
+        if (fresh) stats.registrations++;
+
+        const aid = "S:" + ev.assoc;
+        if (!NODES.get(aid)) {
+          addNode(aid, "assoc", ASSOC[ev.assoc] || ev.assoc, { Code: ev.assoc }, id);
+          stats.associations++;
+        }
+        addLink(id, aid, "in_assoc");
+
+        push("reg", `${ASSOC[ev.assoc] || ev.assoc} ${ev.reg}`,
+             ev.via_cross_ref ? "cross-reference from another association"
+             : ev.stub ? "stub — parent registration"
+             : ev.owner ? "owner " + ev.owner : nodeName(ev.uid));
+        break;
+      }
+
+      case "dna": {
+        const id = "N:" + ev.case;
+        const fresh = !NODES.get(id);
+        addNode(id, "dna", ev.case, { "Case ID": ev.case }, animalId(ev.uid));
+        addLink(animalId(ev.uid), id, "has_dna");
+        if (fresh) stats.dna++;
+        push("dna", `DNA case ${ev.case}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "breed": {
+        const id = "B:" + ev.code;
+        const fresh = !NODES.get(id);
+        addNode(id, "breed", BREED[ev.code] || ev.code, { Code: ev.code }, animalId(ev.uid));
+        const l = addLink(animalId(ev.uid), id, "comp", { percent: ev.percent });
+        if (l) l.meta.percent = ev.percent;
+        if (fresh) stats.breeds++;
+        push("breed", `${+Number(ev.percent).toFixed(2)}% ${BREED[ev.code] || ev.code}`,
+             nodeName(ev.uid));
+        break;
+      }
+
+      case "defect": {
+        const id = "D:" + ev.code;
+        const fresh = !NODES.get(id);
+        const st = DEFECT_STATUS[ev.status] || DEFECT_STATUS.F;
+        const n = addNode(id, "defect", ev.code,
+                          { Defect: DEFECT[ev.code] || ev.code }, animalId(ev.uid));
+        addLink(animalId(ev.uid), id, "tested", { status: ev.status });
+        // a shared locus shows the worst result any animal on it has returned
+        if (st.rank >= (n.severity || 0)) {
+          n.severity = st.rank;
+          n.color = st.color;
+          n.halo = st.color;
+          n.r = 3.0 + st.rank * 0.3;
+        }
+        if (fresh) stats.defects++;
+        push(st.rank >= 2 ? "carrier" : st.rank === 1 ? "suspect" : "free",
+             `${DEFECT[ev.code] || ev.code} — ${st.word}`, nodeName(ev.uid));
+        break;
+      }
+
+      case "parent": {
+        const l = addLink(animalId(ev.parent), animalId(ev.child), "parent", { role: ev.role });
+        if (l && ev.new) stats.links++;
+        push("parent", `${ev.role === "SIRE" ? "Sire" : "Dam"} — ${nodeName(ev.parent)}`,
+             "of " + nodeName(ev.child));
+        break;
+      }
+
+      case "record_end":
+        push("record", "Record complete", nodeName(ev.uid));
+        break;
+    }
+  }
+
+  // ---------------------------------------------------------------- physics
+
+  /* A six-record sample and a real pedigree crawl differ by an order of
+     magnitude in node count, so spacing is derived from how much sky each node
+     can have rather than fixed. */
+  function densityScale() {
+    const n = NODES.size || 1;
+    const area = Math.max(1, (fieldW() - 108) * (fieldH() - INSET.top - 54));
+    return Math.max(0.5, Math.min(1.15, Math.sqrt(area / (n * 3400))));
+  }
+
+  function physics(dt) {
+    const arr = [...NODES.values()];
+    const k = Math.min(dt, 34) / 16;
+    const n = arr.length;
+    const ds = densityScale();
+
+    for (let i = 0; i < n; i++) {
+      const a = arr[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = arr[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1) { dx = (rnd() - 0.5); dy = (rnd() - 0.5); d2 = 1; }
+        const d = Math.sqrt(d2);
+        if (d > 340 * ds) continue;
+        // labelled stars need elbow room for their type, not just their glyph
+        const bulk = (a.showLabel && b.showLabel) ? 2.1 : 1;
+        const f = (2300 * ds * bulk * (a.r + b.r) / 11) / d2 * k;
+        const ux = dx / d, uy = dy / d;
+        a.vx -= ux * f; a.vy -= uy * f;
+        b.vx += ux * f; b.vy += uy * f;
+      }
+    }
+
+    for (const l of LINKS) {
+      const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y;
+      const d = Math.hypot(dx, dy) || 0.01;
+      const stiff = l.kind === "parent" ? 0.012 : 0.021;
+      const f = (d - l.rest * ds) * stiff * k;
+      const ux = dx / d, uy = dy / d;
+      l.a.vx += ux * f; l.a.vy += uy * f;
+      l.b.vx -= ux * f; l.b.vy -= uy * f;
+    }
+
+    const gx = cx(), gy = cy(), pad = 54;
+    const maxX = fieldW() - pad, maxY = fieldH() - pad;
+    const minY = INSET.top + 16;
+    for (const a of arr) {
+      a.vx += (gx - a.x) * 0.0016 * k;
+      a.vy += (gy - a.y) * 0.0016 * k;
+      if (a.x < pad) a.vx += (pad - a.x) * 0.06 * k;
+      if (a.x > maxX) a.vx -= (a.x - maxX) * 0.06 * k;
+      if (a.y < minY) a.vy += (minY - a.y) * 0.06 * k;
+      if (a.y > maxY) a.vy -= (a.y - maxY) * 0.06 * k;
+      for (const b of BLOCKS) pushOut(a, k, b);
+      const damp = Math.pow(0.9, k);
+      a.vx *= damp; a.vy *= damp;
+      a.x += a.vx * k; a.y += a.vy * k;
+      // hard walls: at high node counts the soft push alone loses to repulsion
+      // and stars end up under the ledger rail
+      a.x = Math.min(maxX, Math.max(pad, a.x));
+      a.y = Math.min(maxY, Math.max(minY, a.y));
+    }
+  }
+
+  /* Nudge a star out from behind a block of chrome along the shortest escape. */
+  function pushOut(a, k, rect) {
+    const p = 16;
+    const x0 = rect.x - p, x1 = rect.x + rect.w + p;
+    const y0 = rect.y - p, y1 = rect.y + rect.h + p;
+    if (a.x < x0 || a.x > x1 || a.y < y0 || a.y > y1) return;
+    const right = x1 - a.x, left = a.x - x0, down = y1 - a.y, up = a.y - y0;
+    const m = Math.min(right, left, down, up);
+    if (m === right) a.vx += right * 0.05 * k;
+    else if (m === left) a.vx -= left * 0.05 * k;
+    else if (m === down) a.vy += down * 0.05 * k;
+    else a.vy -= up * 0.05 * k;
+  }
+
+  // ---------------------------------------------------------------- render
+
+  function drawLinks(t) {
+    for (const l of LINKS) {
+      const age = clock - l.born;
+      const p = REDUCED ? 1 : Math.min(1, age / 520);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const x2 = l.a.x + (l.b.x - l.a.x) * ease;
+      const y2 = l.a.y + (l.b.y - l.a.y) * ease;
+
+      if (l.kind === "parent") {
+        ctx.strokeStyle = "rgba(232,201,122,0.42)";
+        ctx.lineWidth = 1.15;
+        ctx.shadowColor = "rgba(232,201,122,0.55)";
+        ctx.shadowBlur = 8;
+      } else if (l.kind === "tested" && l.meta.status && l.meta.status !== "F") {
+        const st = DEFECT_STATUS[l.meta.status] || DEFECT_STATUS.S;
+        ctx.strokeStyle = hexA(st.color, 0.34);
+        ctx.lineWidth = 0.9; ctx.shadowBlur = 0;
+      } else {
+        ctx.strokeStyle = "rgba(126,159,204,0.20)";
+        ctx.lineWidth = 0.75; ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.moveTo(l.a.x, l.a.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      if (!REDUCED && l.kind === "parent" && age < 1700) {
+        const q = (age % 850) / 850;
+        const sx = l.a.x + (l.b.x - l.a.x) * q, sy = l.a.y + (l.b.y - l.a.y) * q;
+        ctx.globalAlpha = 1 - age / 1700;
+        ctx.fillStyle = "#ffe9b0";
+        ctx.beginPath(); ctx.arc(sx, sy, 1.9, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function drawNodes(t) {
+    for (const n of NODES.values()) {
+      const age = clock - n.born;
+      const grow = REDUCED ? 1 : Math.min(1, age / 420);
+      const tw = REDUCED ? 1 : 0.9 + 0.1 * Math.sin(t / 700 + n.tw);
+      const r = n.r * (0.4 + 0.6 * grow) * tw;
+
+      const hg = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5.2);
+      hg.addColorStop(0, hexA(n.halo, 0.42 * grow));
+      hg.addColorStop(0.42, hexA(n.halo, 0.11 * grow));
+      hg.addColorStop(1, hexA(n.halo, 0));
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r * 5.2, 0, 6.283); ctx.fill();
+
+      ctx.fillStyle = n.color;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.283); ctx.fill();
+
+      if (n.kind === "animal" && !n.stub) {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.42, 0, 6.283); ctx.fill();
+      }
+
+      if (!REDUCED && age < 900) ring(n, age / 900, n.halo, r);
+      const pa = clock - n.pulse;
+      if (!REDUCED && pa < 900) ring(n, pa / 900, "#e8c97a", r);
+
+      if (n.id === focusId) {
+        ctx.strokeStyle = "rgba(232,201,122,0.30)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.1, 0, 6.283); ctx.stroke();
+      }
+    }
+  }
+
+  function ring(n, p, color, r) {
+    ctx.strokeStyle = hexA(color, (1 - p) * 0.75);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + p * 34, 0, 6.283);
+    ctx.stroke();
+  }
+
+  /* Animals claim their label slot first; hubs take the next free offset below,
+     above, or further out, and dim rather than collide if the sky is crowded. */
+  function drawLabels() {
+    const mono = getComputedStyle(document.body).getPropertyValue("--font-data");
+    const spaced = "letterSpacing" in ctx;
+    const size = NODES.size > 45 ? 9 : 10;    // a crawled pedigree carries far more type
+    const placed = [];
+    const overlaps = (a, b) =>
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+    const list = [...NODES.values()].filter((n) => n.showLabel)
+      .sort((a, b) => (a.kind === "animal" ? 0 : 1) - (b.kind === "animal" ? 0 : 1));
+
+    for (const n of list) {
+      const age = clock - n.born;
+      const fade = Math.min(1, age / 700);
+      const assoc = n.kind === "assoc";
+      const txt = n.kind === "animal" ? n.label.toUpperCase()
+                : assoc ? n.label.toUpperCase() : n.label;
+
+      ctx.font = (assoc ? size - 0.5 : size) + "px " + mono;
+      if (spaced) ctx.letterSpacing = assoc ? "1.6px" : "0px";
+      const w = ctx.measureText(txt).width;
+
+      const base = n.y + n.r * 2.0 + 4;
+      let y = base, clear = false;
+      for (const dy of [0, -(n.r * 4 + 17), 13, -(n.r * 4 + 30), 26, -(n.r * 4 + 43)]) {
+        const box = { x: n.x - w / 2 - 3, y: base + dy - 2, w: w + 6, h: 16 };
+        if (!placed.some((p) => overlaps(p, box))) { placed.push(box); y = base + dy; clear = true; break; }
+      }
+      if (!clear) placed.push({ x: n.x - w / 2 - 3, y: base - 2, w: w + 6, h: 16 });
+
+      const tint = n.kind === "animal" ? "#dce6f7" : n.halo;
+      ctx.fillStyle = hexA(tint, (clear ? 0.8 : 0.3) * fade);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = "rgba(7,11,20,0.95)";
+      ctx.shadowBlur = 6;
+      ctx.fillText(txt, n.x, y);
+      ctx.shadowBlur = 0;
+    }
+    if (spaced) ctx.letterSpacing = "0px";
+  }
+
+  function hexA(hex, a) {
+    const h = hex.replace("#", "");
+    const v = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+    return `rgba(${(v >> 16) & 255},${(v >> 8) & 255},${v & 255},${a})`;
+  }
+
+  function render(t) {
+    drawBackdrop(t);
+    drawLinks(t);
+    drawNodes(t);
+    drawLabels();
+  }
+
+  // ---------------------------------------------------------------- replay
+
+  const DUR = {
+    record_start: 620, record_end: 300, animal: 340, merge: 480, enrich: 300,
+    registration: 260, dna: 190, breed: 200, defect: 170, parent: 340
+  };
+  const stepFor = (ev) => DUR[ev.type] || 220;
+
+  let cursor = 0, acc = 0, playing = true, speed = 1, dirty = true;
+
+  function advance(dt) {
+    if (!playing || cursor >= EV.length) return;
+    acc += dt * speed;
+    let guard = 0;
+    while (cursor < EV.length && acc >= stepFor(EV[cursor]) && guard++ < 400) {
+      acc -= stepFor(EV[cursor]);
+      apply(EV[cursor]);
+      cursor++;
+      dirty = true;
+    }
+    if (cursor >= EV.length) {
+      playing = false;
+      nowLine("Load complete", `${stats.animals} animals resolved from ${DATA.summary.records} records`);
+      syncTransport();
+    }
+  }
+
+  function reset() {
+    NODES.clear(); LINKS.length = 0; logRows = [];
+    for (const k of Object.keys(stats)) stats[k] = 0;
+    cursor = 0; acc = 0; focusId = null; clock = 0;
+    rnd = mulberry(20260812);
+    dirty = true;
+  }
+
+  function seek(index) {
+    reset();
+    clock = -4000;                       // everything already born, fully drawn
+    for (let i = 0; i < index; i++) apply(EV[i]);
+    cursor = index;
+    clock = 0;
+    for (let i = 0; i < 320; i++) physics(16);
+    dirty = true;
+  }
+
+  // ---------------------------------------------------------------- chrome
+
+  const elCounts = document.getElementById("counts");
+  const elLog = document.getElementById("log");
+  const elFill = document.getElementById("fill");
+  const elScrub = document.getElementById("scrub");
+  const elReadout = document.getElementById("readout");
+  const elPlay = document.getElementById("play");
+  const elSpeed = document.getElementById("speed");
+  const elNow = document.getElementById("now");
+  const elTip = document.getElementById("tip");
+
+  const countEls = {};
+  for (const [key, label, cls] of COUNT_DEFS) {
+    const d = document.createElement("div");
+    d.className = "count";
+    d.innerHTML = `<span class="n">0</span><span class="k ${cls}">${label}</span>`;
+    elCounts.appendChild(d);
+    countEls[key] = { box: d, n: d.querySelector(".n"), last: 0 };
+  }
+
+  function nowLine(main, sub) {
+    elNow.innerHTML = main + (sub ? ` <span>${escapeHtml(sub)}</span>` : "");
+    elNow.classList.add("on");
+  }
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  let lastLogLen = -1;
+  function paintChrome() {
+    for (const [key] of COUNT_DEFS) {
+      const c = countEls[key];
+      if (c.last !== stats[key]) {
+        c.n.textContent = stats[key];
+        c.last = stats[key];
+        c.box.classList.add("bump");
+        setTimeout(() => c.box.classList.remove("bump"), 420);
+      }
+    }
+
+    if (lastLogLen !== logRows.length) {
+      const slice = logRows.slice(-60);
+      elLog.innerHTML = slice.map((r) => {
+        const col = LOG_COLOR[r.kind] || "#71829d";
+        return `<div class="row${r.head ? " head" : ""}" style="color:${col}">` +
+               `<div class="bar"></div><div class="txt">${escapeHtml(r.txt)}` +
+               (r.det ? `<span class="det">${escapeHtml(r.det)}</span>` : "") +
+               `</div></div>`;
+      }).join("");
+      elLog.scrollTop = elLog.scrollHeight;
+      lastLogLen = logRows.length;
+    }
+
+    const pct = (cursor / EV.length) * 100;
+    elFill.style.width = pct.toFixed(2) + "%";
+    if (document.activeElement !== elScrub) elScrub.value = String(cursor);
+    const rec = recordAt(cursor);
+    elReadout.innerHTML = `<b>${cursor}</b> / ${EV.length} events` +
+      ` &nbsp;·&nbsp; record <b>${rec}</b> / ${DATA.summary.records}`;
+  }
+
+  function recordAt(i) {
+    let n = 0;
+    for (let j = 0; j < i && j < EV.length; j++) if (EV[j].type === "record_start") n++;
+    return n;
+  }
+
+  function syncTransport() {
+    elPlay.textContent = cursor >= EV.length ? "Replay" : (playing ? "Pause" : "Play");
+  }
+
+  elPlay.addEventListener("click", () => {
+    if (cursor >= EV.length) { reset(); playing = true; }
+    else playing = !playing;
+    syncTransport();
+  });
+  document.getElementById("restart").addEventListener("click", () => {
+    reset(); playing = true; syncTransport();
+  });
+  const SPEEDS = [0.5, 1, 2, 4];
+  elSpeed.addEventListener("click", () => {
+    speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    elSpeed.innerHTML = (speed === 0.5 ? "0.5" : speed) + "&times;";
+  });
+  elScrub.max = String(EV.length);
+  elScrub.addEventListener("input", () => {
+    playing = false;
+    seek(Number(elScrub.value));
+    syncTransport();
+  });
+
+  // record boundary ticks
+  document.getElementById("ticks").innerHTML = EV.map((e, i) =>
+    e.type === "record_start" ? `<span style="left:${(i / EV.length) * 100}%"></span>` : ""
+  ).join("");
+
+  // source line
+  document.getElementById("source").innerHTML =
+    `<span><b>${escapeHtml(DATA.source)}</b></span>` +
+    `<span>${DATA.summary.records} records</span>` +
+    `<span>real load <b>${DATA.elapsed_ms.toFixed(2)} ms</b></span>` +
+    `<span>${EV.length} graph writes</span>` +
+    `<span>replayed slowly enough to watch</span>`;
+
+  // ---------------------------------------------------------------- hover
+
+  let hover = null;
+  cv.addEventListener("mousemove", (e) => {
+    const x = e.clientX, y = e.clientY;
+    let best = null, bd = 18;
+    for (const n of NODES.values()) {
+      const d = Math.hypot(n.x - x, n.y - y);
+      if (d < Math.max(bd, n.r * 2.2)) { if (!best || d < bd) { best = n; bd = d; } }
+    }
+    hover = best;
+    if (!best) { elTip.hidden = true; return; }
+    const kindLabel = { animal: "Animal", reg: "Registration", assoc: "Association",
+                        breed: "Breed", dna: "DNA case", defect: "Genetic defect" }[best.kind];
+    elTip.innerHTML = `<div class="tt">${kindLabel}${best.stub ? " · stub" : ""}</div>` +
+      `<div class="tn">${escapeHtml(best.label)}</div><dl>` +
+      Object.entries(best.meta).map(([k, v]) =>
+        `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join("") + `</dl>`;
+    elTip.hidden = false;
+    const r = elTip.getBoundingClientRect();
+    elTip.style.left = Math.min(x + 16, window.innerWidth - r.width - 12) + "px";
+    elTip.style.top = Math.min(y + 16, window.innerHeight - r.height - 12) + "px";
+  });
+  cv.addEventListener("mouseleave", () => { hover = null; elTip.hidden = true; });
+
+  // ---------------------------------------------------------------- loop
+
+  window.addEventListener("resize", fit);
+  fit();
+  syncTransport();
+
+  let last = performance.now();
+  let capturing = false;
+
+  function frame(now) {
+    const dt = Math.min(64, now - last);
+    last = now;
+    if (!capturing) step(dt);
+    requestAnimationFrame(frame);
+  }
+
+  /* One simulation step + one painted frame. Driving this on a fixed dt instead
+     of wall-clock is what makes an off-screen recording reproducible. */
+  function step(dt) {
+    clock += dt;
+    advance(dt);
+    physics(dt);
+    render(clock);
+    paintChrome();
+    return cursor;
+  }
+
+  requestAnimationFrame(frame);
+
+  // exposed for frame-accurate capture and for testing
+  window.__constellation = {
+    seek, step,
+    beginCapture() { capturing = true; reset(); playing = true; syncTransport(); },
+    endCapture() { capturing = false; last = performance.now(); },
+    get cursor() { return cursor; },
+    get total() { return EV.length; },
+    get done() { return cursor >= EV.length; },
+    set playing(v) { playing = v; },
+    nodes: NODES, links: LINKS, stats
+  };
+})();
+</script>
