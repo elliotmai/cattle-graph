@@ -103,7 +103,9 @@ CATTLE_INGEST_TOKEN=CHANGEME
 # Crawl politeness. Do not lower the delay: one request per ~1.5s per host is
 # the agreed ceiling, and a datacenter IP is far more visible than a home one.
 CRAWL_DELAY=1.5
-CRAWL_UA=cattle-graph-crawler/1.0 (authorized; contact: eli.mai12932@gmail.com)
+# Quoted because the parentheses are a bash syntax error when this file is
+# sourced (load_all.sh does exactly that). systemd strips the quotes.
+CRAWL_UA="cattle-graph-crawler/1.0 (authorized; contact: eli.mai12932@gmail.com)"
 EOF
 chown root:ubuntu /etc/cattle-graph.env
 chmod 0640 /etc/cattle-graph.env
