@@ -1,0 +1,24 @@
+# Pushes crawl progress to the Netlify board. Fired by cattle-publish.timer.
+[Unit]
+Description=publish cattle-graph status to Netlify
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/cattle-graph
+EnvironmentFile=/etc/cattle-graph.env
+ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/deploy/publish_status.py
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cattle-publish
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+# Read-only: this only ever reads status files and posts them.
+ReadOnlyPaths=/opt/cattle-graph

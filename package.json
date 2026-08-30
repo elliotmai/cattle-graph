@@ -1,0 +1,13 @@
+{
+  "name": "cattle-graph-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Netlify functions for the read-only cattle-graph status board. The crawler itself is Python; this is only the published view.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "scripts": {
+    "test": "node --test netlify/functions/*.test.mjs"
+  }
+}

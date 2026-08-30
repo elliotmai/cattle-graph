@@ -95,6 +95,11 @@ NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=CHANGEME
 NEO4J_DATABASE=neo4j
 
+# Where the status board lives, and the token that lets this box write to it.
+# The view password is a Netlify env var, not here -- this box only publishes.
+CATTLE_ENDPOINT=https://CHANGEME.netlify.app/api/publish
+CATTLE_INGEST_TOKEN=CHANGEME
+
 # Crawl politeness. Do not lower the delay: one request per ~1.5s per host is
 # the agreed ceiling, and a datacenter IP is far more visible than a home one.
 CRAWL_DELAY=1.5
@@ -119,8 +124,10 @@ sudo -u ubuntu python3 -m venv "$APP/.venv"
 sudo -u ubuntu "$APP/.venv/bin/pip" install --quiet --upgrade pip
 sudo -u ubuntu "$APP/.venv/bin/pip" install --quiet -r "$APP/requirements.txt"
 
-install -m 0644 "$APP/deploy/crawl@.service"          /etc/systemd/system/
+install -m 0644 "$APP/deploy/crawl@.service"           /etc/systemd/system/
 install -m 0644 "$APP/deploy/cattle-dashboard.service" /etc/systemd/system/
+install -m 0644 "$APP/deploy/cattle-publish.service"   /etc/systemd/system/
+install -m 0644 "$APP/deploy/cattle-publish.timer"     /etc/systemd/system/
 systemctl daemon-reload
 
 echo

@@ -25,3 +25,6 @@ crawler.zip
 
 # Local stdout/stderr from Windows-launched crawlers (systemd uses journald)
 logs/
+
+# Netlify function dependencies
+node_modules/

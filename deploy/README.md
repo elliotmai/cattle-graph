@@ -84,3 +84,56 @@ bash deploy/load_all.sh               # push into Neo4j, idempotent
   `ssh -L 8787:localhost:8787` rather than opening the port.
 - **Credentials via `EnvironmentFile`**, never as command-line arguments --
   arguments are visible in `ps` to every user on the box.
+
+## The published status board
+
+`dashboard_web.py` cannot go on Netlify: it globs local status files and
+shells out to `crawl.py` and `loader.py`. Functions are serverless JS with no
+access to this box's disk and no way to start a subprocess. So the board is
+split in two, which is the arrangement muster already uses:
+
+| | where | what |
+|---|---|---|
+| read-only board | Netlify function | counts, rates, ETA, staleness |
+| controls | crawl box, SSH tunnel | `/api/load`, `/api/schema`, `/api/reconcile` |
+
+The box pushes; nothing polls it. `publish_status.py` runs every 60s from
+`cattle-publish.timer` and POSTs to `/api/publish`.
+
+### Status only
+
+`publish_status.py` projects each status file down to an allowlist —
+`association, state, done, pending, failed, skipped, rate_per_min, pct,
+updated_at`. The `current` block (an animal's name, registration, DOB, sex and
+genetic defects) and `pid` never leave the box.
+
+`publish.mjs` independently rejects any board carrying a field outside that
+list. The projection is the mechanism; the rejection is there so the guarantee
+does not depend on the client behaving.
+
+```bash
+./deploy/publish_status.py --dry-run   # see exactly what would be sent
+```
+
+### Two secrets, set in Netlify
+
+| variable | who uses it | what it protects |
+|---|---|---|
+| `CATTLE_INGEST_TOKEN` | the box, `Bearer` | writing to the board |
+| `CATTLE_VIEW_PASSWORD` | you, HTTP Basic | reading the board |
+
+Set them in **Site configuration → Environment variables** so they are read at
+request time inside the function. A secret in a *build* variable that the
+bundler inlines into client JS is public. `CATTLE_INGEST_TOKEN` also goes in
+`/etc/cattle-graph.env` on the box, along with `CATTLE_ENDPOINT`.
+
+Both endpoints return **503 when their variable is unset** rather than falling
+open. A typo'd variable name breaks the site loudly instead of quietly
+publishing it. `netlify/functions/auth.test.mjs` asserts that, plus the
+constant-time compare and the field allowlist:
+
+```bash
+npm test
+```
+
+Any username works at the Basic auth prompt — the password is the secret.

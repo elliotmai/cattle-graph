@@ -9,4 +9,7 @@
 set -euo pipefail
 sudo systemctl enable --now crawl@CHIA crawl@MAINE crawl@SHORT
 sudo systemctl enable --now cattle-dashboard
+# The board is fed by a timer, not a daemon: one POST a minute.
+sudo systemctl enable --now cattle-publish.timer
 systemctl --no-pager --plain list-units 'crawl@*' cattle-dashboard.service
+systemctl --no-pager --plain list-timers cattle-publish.timer
