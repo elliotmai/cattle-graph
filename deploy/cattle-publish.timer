@@ -1,11 +1,16 @@
-# Every 60s. The board shows how long ago the box last reported, so a timer
+# Every 30s -- the board polls every 10s while visible, so this bounds how
+# stale "now reading" can be. Not lower: Netlify counts each publish as a
+# function invocation, and 30s is ~86k/month against a 125k free-tier budget
+# that page views also draw from.
+#
+# The board shows how long ago the box last reported, so a timer
 # that stops is visible on the page rather than silent.
 [Unit]
-Description=publish cattle-graph status every minute
+Description=publish cattle-graph status every 30s
 
 [Timer]
 OnBootSec=90s
-OnUnitActiveSec=60s
+OnUnitActiveSec=30s
 # Without this a missed window (reboot, suspend) waits for the next tick.
 Persistent=true
 AccuracySec=5s

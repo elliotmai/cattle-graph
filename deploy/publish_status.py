@@ -2,13 +2,14 @@
 """Push crawl progress to the Netlify board.
 
 The crawl box has no inbound ports open, so it publishes rather than being
-polled. Run from a systemd timer every 60s.
+polled. Run from a systemd timer every 30s.
 
-Status only. The status files carry a `current` block -- one animal's name,
-registration, birth date, sex and genetic defects -- and this projection drops
-it, along with `pid`. That is the whole reason the projection lives here
-rather than in the function: the data never leaves the box in the first place,
-so nothing downstream has to be trusted to strip it.
+Progress, plus the identity of the animal being read right now. The status
+files carry a full `current` record -- name, registration, colour, birth date,
+sex and genetic defect findings -- and this projection keeps only the three
+identity fields, dropping the rest along with `pid`. That is why the projection
+lives here rather than in the function: what is not published never leaves the
+box, so nothing downstream has to be trusted to strip it.
 
     ./publish_status.py            # publish
     ./publish_status.py --dry-run  # print exactly what would be sent
@@ -30,7 +31,15 @@ APP_DIR = os.environ.get("APP_DIR", "/opt/cattle-graph")
 # status file later is dropped by default rather than published by accident --
 # the function rejects unknown fields too, so a mistake here fails loudly.
 ALLOWED = ("association", "state", "done", "pending", "failed", "skipped",
-           "rate_per_min", "pct", "updated_at")
+           "rate_per_min", "pct", "updated_at", "current")
+
+# The status file's `current` block is a full animal record: name, reg, colour,
+# date of birth, sex and genetic defect codes with their status. Only the three
+# identity fields are published -- enough to show what is being read right now,
+# without putting birth dates and defect findings on a public URL. Widening
+# this is a deliberate act, not an oversight: add the key here and to the
+# allowlist in publish.mjs, which rejects anything it does not recognise.
+CURRENT_FIELDS = ("association", "reg", "name")
 
 
 def project(path: str) -> dict | None:
@@ -56,6 +65,10 @@ def project(path: str) -> dict | None:
     }
     if not board["association"]:
         return None
+
+    cur = st.get("current") or {}
+    if cur.get("reg"):
+        board["current"] = {k: cur.get(k) for k in CURRENT_FIELDS}
 
     # An association that has never crawled anything (ANGUS, blocked by a JS
     # challenge angus.py cannot clear) would sit on the board as a permanently

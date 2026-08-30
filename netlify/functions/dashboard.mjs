@@ -149,6 +149,8 @@ export function renderHtml(s) {
         <div><dt>eta</dt><dd>${b.etaDays !== null ? `${b.etaDays}d` : '&mdash;'}</dd></div>
         ${Number(b.failed) ? `<div><dt>failed</dt><dd class="warn">${num(b.failed)}</dd></div>` : ''}
       </dl>
+      ${b.current?.reg ? `<p class="now"><span class="dot"></span><span class="reg">${
+        esc(b.current.reg)}</span> ${esc(b.current.name || '')}</p>` : ''}
       <footer>updated ${esc(ago(b.ageSec))}</footer>
     </article>`).join('');
 
@@ -196,6 +198,16 @@ export function renderHtml(s) {
   .card footer{margin-top:auto;padding-top:.7rem;border-top:1px solid var(--line);
                color:var(--dim);font-size:.75rem}
   .card dl{margin-bottom:.9rem}
+  /* The animal being read right now. Sits directly above the footer so the
+     eye finds it in the same place on every card. */
+  .now{margin:0 0 .3rem;font-size:.82rem;display:flex;align-items:center;gap:.45rem;
+       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now .reg{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--good);flex:none;
+       animation:pulse 2s ease-in-out infinite}
+  .card.stale .dot{background:var(--bad);animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
   .foot{margin-top:2rem;color:var(--dim);font-size:.78rem}
 </style>
 <main>
@@ -217,7 +229,51 @@ export function renderHtml(s) {
 
   <p class="foot">published ${esc(ago(s.publishAgeSec))} &middot;
      controls stay on the crawl box, reachable over SSH only</p>
-</main>`;
+</main>
+<script>
+// Live update. Rather than re-implementing the card markup in the browser and
+// keeping two renderers in step, this refetches the page and swaps <main> --
+// the server stays the only thing that knows how a card looks.
+//
+// The script lives outside <main> deliberately, so swapping the contents does
+// not duplicate or re-run it.
+(function () {
+  var PERIOD = 10000;
+  var main = document.querySelector('main');
+  var timer = null, failures = 0;
+
+  async function tick() {
+    // A tab left open overnight would otherwise keep billing function
+    // invocations against a page nobody is looking at.
+    if (document.hidden) return;
+    try {
+      var res = await fetch(location.pathname, {
+        cache: 'no-store',
+        headers: { 'x-live-refresh': '1' },
+      });
+      // 401 means the browser dropped the cached basic-auth credential.
+      // Reloading lets it prompt again instead of silently freezing.
+      if (res.status === 401) { location.reload(); return; }
+      if (!res.ok) throw new Error(res.status);
+      var doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      var fresh = doc.querySelector('main');
+      if (fresh) { main.innerHTML = fresh.innerHTML; failures = 0; }
+    } catch (e) {
+      // Back off rather than hammering a site that is having a bad time; the
+      // "published Ns ago" line ages visibly in the meantime, so a stalled
+      // updater shows up on the page instead of pretending everything is fine.
+      if (++failures >= 3 && timer) { clearInterval(timer); timer = null; }
+    }
+  }
+
+  function start() { if (!timer) timer = setInterval(tick, PERIOD); }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { if (timer) { clearInterval(timer); timer = null; } }
+    else { tick(); start(); }
+  });
+  start();
+})();
+</script>`;
 }
 
 function authorized(header, expected) {

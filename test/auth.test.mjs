@@ -79,18 +79,55 @@ test('publish rejects a source that is not safe as a blob key', async () => {
   }
 });
 
-test('publish rejects boards carrying animal data', async () => {
+test('publish rejects unknown board fields', async () => {
   process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
   const publish = await load('publish.mjs');
   const auth = { authorization: 'Bearer ingest-secret' };
 
-  // This is the "status only" guarantee. The projection happens on the box,
-  // but the endpoint must not depend on the client having done it right.
   const res = await publish(post({
     source: 'lightsail',
-    boards: [{ association: 'CHIA', done: 1, current: { name: 'TLF MS TANDY 1CA', reg: '212025' } }],
+    boards: [{ association: 'CHIA', done: 1, pid: 4016, owner: 'someone' }],
   }, auth));
 
   assert.equal(res.status, 400);
-  assert.match((await res.json()).error, /unexpected fields: current/);
+  assert.match((await res.json()).error, /unexpected fields: pid, owner/);
+});
+
+test('publish rejects a current animal carrying more than identity', async () => {
+  process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
+  const publish = await load('publish.mjs');
+  const auth = { authorization: 'Bearer ingest-secret' };
+
+  // `current` is published so the board can show what is being read. Identity
+  // only -- the crawler's record also holds birth date, sex, colour and
+  // genetic defect findings, and those must not reach a public URL even if a
+  // future change to publish_status.py stops trimming them.
+  const res = await publish(post({
+    source: 'lightsail',
+    boards: [{
+      association: 'CHIA',
+      done: 1,
+      current: {
+        association: 'CHIA', reg: '212025', name: 'TLF MS TANDY 1CA',
+        dob: '1991-04-03', sex: 'F', defects: [{ code: 'AM', status: 'Suspect' }],
+      },
+    }],
+  }, auth));
+
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /current carries unexpected fields: dob, sex, defects/);
+});
+
+test('publish rejects a current that is not an object', async () => {
+  process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
+  const publish = await load('publish.mjs');
+  const auth = { authorization: 'Bearer ingest-secret' };
+
+  const res = await publish(post({
+    source: 'lightsail',
+    boards: [{ association: 'CHIA', done: 1, current: ['TLF MS TANDY 1CA'] }],
+  }, auth));
+
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /current must be an object/);
 });

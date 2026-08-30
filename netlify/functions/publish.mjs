@@ -51,8 +51,14 @@ export default async (request) => {
   // having done the right thing.
   const allowed = new Set([
     'association', 'state', 'done', 'pending', 'failed', 'skipped',
-    'rate_per_min', 'pct', 'updated_at',
+    'rate_per_min', 'pct', 'updated_at', 'current',
   ]);
+  // `current` names the animal being read right now. Identity only -- the
+  // crawler's own record also carries colour, birth date, sex and genetic
+  // defect findings, and those are not published. publish_status.py trims it
+  // at the source; this is the second gate, so the guarantee does not rest on
+  // the client having done it right.
+  const allowedCurrent = new Set(['association', 'reg', 'name']);
   for (const b of body.boards) {
     if (!b || typeof b !== 'object') {
       return json({ error: 'each board must be an object' }, 400);
@@ -60,6 +66,15 @@ export default async (request) => {
     const extra = Object.keys(b).filter((k) => !allowed.has(k));
     if (extra.length) {
       return json({ error: `board carries unexpected fields: ${extra.join(', ')}` }, 400);
+    }
+    if (b.current !== undefined && b.current !== null) {
+      if (typeof b.current !== 'object' || Array.isArray(b.current)) {
+        return json({ error: 'current must be an object' }, 400);
+      }
+      const extraCur = Object.keys(b.current).filter((k) => !allowedCurrent.has(k));
+      if (extraCur.length) {
+        return json({ error: `current carries unexpected fields: ${extraCur.join(', ')}` }, 400);
+      }
     }
   }
 
