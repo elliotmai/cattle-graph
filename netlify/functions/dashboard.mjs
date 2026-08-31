@@ -1,10 +1,9 @@
 import { getStore } from '@netlify/blobs';
-import { timingSafeEqual } from 'node:crypto';
 
 /**
  * netlify.toml [[headers]] apply to static assets, not to what a function
- * returns. A probe of the deployed 401 came back with neither X-Robots-Tag
- * nor X-Frame-Options, so the board sets them itself.
+ * returns. A probe of the deployed function came back with neither
+ * X-Robots-Tag nor X-Frame-Options, so the board sets them itself.
  */
 const SECURITY = {
   'x-content-type-options': 'nosniff',
@@ -15,7 +14,12 @@ const SECURITY = {
 };
 
 /**
- * The public status board. Read-only on purpose.
+ * The public status board. Read-only on purpose, and open: it carries counts,
+ * rates and the registration of the animal being read, none of which is worth
+ * a password. The gate is on what is published, not on who may look --
+ * publish_status.py projects each status file down to an allowlist and
+ * publish.mjs rejects anything outside it, so nothing reaches this page that
+ * a stranger should not see.
  *
  * dashboard_web.py on the crawl box also exposes /api/load, /api/schema,
  * /api/reconcile and /api/autoload, which start subprocesses. None of that
@@ -24,28 +28,6 @@ const SECURITY = {
  * from a phone: how far along the crawl is, and whether it is still moving.
  */
 export default async (request) => {
-  const expected = process.env.CATTLE_VIEW_PASSWORD;
-  if (!expected) {
-    // Same refusal as the ingest endpoint. A missing password must not mean
-    // "no password required" -- that is how a private board goes public
-    // without anyone noticing.
-    return new Response('CATTLE_VIEW_PASSWORD is not set on this site', {
-      status: 503,
-      headers: SECURITY,
-    });
-  }
-  if (!authorized(request.headers.get('authorization'), expected)) {
-    // Basic auth: the browser draws the login box, so there is no login page
-    // to build and no session cookie to get wrong.
-    return new Response('Authentication required', {
-      status: 401,
-      headers: {
-        ...SECURITY,
-        'www-authenticate': 'Basic realm="cattle-graph", charset="UTF-8"',
-      },
-    });
-  }
-
   const store = getStore('cattle-graph');
   const { blobs } = await store.list({ prefix: 'status/' });
   const entries = (await Promise.all(
@@ -409,9 +391,6 @@ export function renderHtml(s) {
         cache: 'no-store',
         headers: { 'x-live-refresh': '1' },
       });
-      // 401 means the browser dropped the cached basic-auth credential.
-      // Reloading lets it prompt again instead of silently freezing.
-      if (res.status === 401) { location.reload(); return; }
       if (!res.ok) throw new Error(res.status);
       var doc = new DOMParser().parseFromString(await res.text(), 'text/html');
       var fresh = doc.querySelector('main');
@@ -432,21 +411,6 @@ export function renderHtml(s) {
   start();
 })();
 </script>`;
-}
-
-function authorized(header, expected) {
-  const raw = String(header ?? '');
-  if (!/^Basic\s+/i.test(raw)) return false;
-  let decoded;
-  try {
-    decoded = Buffer.from(raw.replace(/^Basic\s+/i, ''), 'base64').toString('utf8');
-  } catch { return false; }
-  // Any username; the password is the secret. Constant-time so it cannot be
-  // guessed a byte at a time.
-  const given = decoded.slice(decoded.indexOf(':') + 1);
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export const config = { path: ['/', '/summary.json'] };

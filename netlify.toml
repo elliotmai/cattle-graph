@@ -20,9 +20,9 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
-    # A password-protected board has no business in a search index. Basic auth
-    # already blocks a crawler, but the header costs nothing and covers the
-    # window where the password is briefly unset.
+    # The board is open to anyone with the URL, but it is a progress readout
+    # for one crawl, not a page anyone should reach from a search for a
+    # registration number. Nothing here is secret; it is simply not content.
     X-Robots-Tag = "noindex, nofollow"
 
 # Netlify has no mapping for .webmanifest and falls back to

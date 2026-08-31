@@ -96,7 +96,7 @@ NEO4J_PASSWORD=CHANGEME
 NEO4J_DATABASE=neo4j
 
 # Where the status board lives, and the token that lets this box write to it.
-# The view password is a Netlify env var, not here -- this box only publishes.
+# Reading the board needs nothing; this box only publishes.
 CATTLE_ENDPOINT=https://CHANGEME.netlify.app/api/publish
 CATTLE_INGEST_TOKEN=CHANGEME
 

@@ -115,25 +115,31 @@ does not depend on the client behaving.
 ./deploy/publish_status.py --dry-run   # see exactly what would be sent
 ```
 
-### Two secrets, set in Netlify
+### One secret, set in Netlify
 
 | variable | who uses it | what it protects |
 |---|---|---|
 | `CATTLE_INGEST_TOKEN` | the box, `Bearer` | writing to the board |
-| `CATTLE_VIEW_PASSWORD` | you, HTTP Basic | reading the board |
 
-Set them in **Site configuration → Environment variables** so they are read at
+Set it in **Site configuration → Environment variables** so it is read at
 request time inside the function. A secret in a *build* variable that the
 bundler inlines into client JS is public. `CATTLE_INGEST_TOKEN` also goes in
 `/etc/cattle-graph.env` on the box, along with `CATTLE_ENDPOINT`.
 
-Both endpoints return **503 when their variable is unset** rather than falling
-open. A typo'd variable name breaks the site loudly instead of quietly
-publishing it. `test/auth.test.mjs` asserts that, plus the
-constant-time compare and the field allowlist:
+`/api/publish` returns **503 when the token is unset** rather than falling
+open. A typo'd variable name breaks writing loudly instead of quietly turning
+it into a public write endpoint.
+
+Reading needs no credential. The board carries no controls and no animal
+records — counts, rates, and the registration being read — so the thing worth
+guarding is what gets published, not who may look at it, and that guard is the
+projection in `publish_status.py` plus the allowlist in `publish.mjs`. If
+`CATTLE_VIEW_PASSWORD` is still set on the site from before, delete it; the
+function no longer reads it.
+
+`test/auth.test.mjs` asserts all of it — the 503, the constant-time compare,
+the field allowlist, and that the board serves an anonymous reader:
 
 ```bash
 npm test
 ```
-
-Any username works at the Basic auth prompt — the password is the secret.
