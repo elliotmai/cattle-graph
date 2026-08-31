@@ -522,8 +522,15 @@ def parse_progeny(html: str, association: str) -> list[dict]:
 def scrape_animal(association: str, reg: str, session: requests.Session,
                   fetch_progeny: bool = True, timeout: int = 30,
                   save_html_dir: Optional[str] = None,
-                  delay: float = 1.0) -> tuple[dict, list[dict]]:
+                  delay: float = 1.0,
+                  fetch_epds: bool = True) -> tuple[dict, list[dict]]:
     """Fetch the container page plus the detail tabs and assemble one record.
+
+    Every tab is a separate request against a shared host, so which ones are
+    fetched is the single biggest lever on how fast the crawl goes and how much
+    load it puts on the association. `_pedigree` is what makes the crawl
+    recursive and `_genotype` carries the defect findings, so those stay;
+    `_progeny` and `_epds` are optional and cost a request each.
 
     Raises AnimalNotFound when the registration has no animal behind it.
     """
@@ -546,7 +553,9 @@ def scrape_animal(association: str, reg: str, session: requests.Session,
 
     session.headers["Referer"] = url
 
-    wanted = ["_pedigree", "_genotype", "_epds"]
+    wanted = ["_pedigree", "_genotype"]
+    if fetch_epds:
+        wanted.append("_epds")
     if fetch_progeny:
         wanted.append("_progeny")
 
