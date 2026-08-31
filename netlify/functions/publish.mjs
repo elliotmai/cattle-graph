@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import { timingSafeEqual } from 'node:crypto';
+import { appendPoint } from '../lib/history.mjs';
 
 /**
  * Where the crawl box sends its progress.
@@ -110,7 +111,25 @@ export default async (request) => {
   };
   await store.setJSON(key, entry);
 
-  return json({ ok: true, source, boards: entry.boards.length });
+  // Progress over time, for the trend charts. Best effort on purpose: the
+  // status blob above is what the board needs to work at all, and losing a
+  // point out of the history is not worth failing a publish -- and so
+  // rejecting the crawl box's only report -- over.
+  let recorded = false;
+  try {
+    const prev = await store.get('history', { type: 'json' }).catch(() => null);
+    const { points, changed } = appendPoint(prev, body.boards, Date.now());
+    // 30s publishes against a 10-minute resolution: usually there is nothing
+    // to record and nothing to write.
+    if (changed) {
+      await store.setJSON('history', { points });
+      recorded = true;
+    }
+  } catch {
+    // Deliberately swallowed; the publish itself already succeeded.
+  }
+
+  return json({ ok: true, source, boards: entry.boards.length, recorded });
 };
 
 /**
