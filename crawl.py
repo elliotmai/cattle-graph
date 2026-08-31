@@ -212,6 +212,27 @@ class Frontier:
         self.conn.commit()
         return cur.rowcount
 
+    def park_foreign(self, association: str) -> int:
+        """Mark every pending animal from another association as skipped.
+
+        A pedigree cites registrations in other registries, and DigitalBeef
+        serves ten of them, so following those neighbours walks the crawler out
+        of the breed it was started for and into the next one. Parked rather
+        than deleted: --reset-skipped puts them all back if the scope is ever
+        widened again.
+        """
+        cur = self.conn.execute(
+            "UPDATE queue SET status='skipped', updated_at=? "
+            "WHERE status='pending' AND association <> ?",
+            (self._now(), association.upper()))
+        self.conn.commit()
+        return cur.rowcount
+
+    def pending_by_association(self) -> list[tuple[str, int]]:
+        return self.conn.execute(
+            "SELECT association, COUNT(*) FROM queue WHERE status='pending' "
+            "GROUP BY association ORDER BY COUNT(*) DESC").fetchall()
+
     def counts(self) -> dict:
         rows = self.conn.execute("SELECT status, COUNT(*) FROM queue GROUP BY status").fetchall()
         return {s: c for s, c in rows}
@@ -281,6 +302,12 @@ def run(args) -> None:
         n = frontier.reset_skipped()
         log.info("Reset %d skipped item(s) to pending.", n)
 
+    if args.skip_foreign:
+        if not args.association:
+            raise SystemExit("--skip-foreign requires --association.")
+        n = frontier.park_foreign(args.association)
+        log.info("Parked %d pending item(s) from other associations.", n)
+
     if args.add_seeds_only:
         log.info("Seeds queued. Frontier: %s", frontier.counts())
         return
@@ -297,6 +324,13 @@ def run(args) -> None:
     robots = None if args.ignore_robots else db.RobotsCache(args.user_agent)
 
     status_assoc = (args.association or "").upper() or "MIXED"
+    # None means "crawl whatever the frontier holds" -- the original behaviour.
+    scope = status_assoc if (args.stay_in_association and args.association) else None
+    if args.stay_in_association and not args.association:
+        log.warning("--stay-in-association needs --association; crawling unscoped.")
+    if scope:
+        log.info("Scoped to %s. Pending by association: %s",
+                 scope, dict(frontier.pending_by_association()))
     start_ts = time.time()
     last_current = None
     processed = 0
@@ -310,6 +344,12 @@ def run(args) -> None:
             assoc, reg, depth = row
 
             if args.max_depth is not None and depth > args.max_depth:
+                frontier.mark_skipped(assoc, reg)
+                continue
+
+            # Left over from before the scope existed, or queued by another
+            # process. Parking is local and instant -- no request, no delay.
+            if scope and assoc.upper() != scope:
                 frontier.mark_skipped(assoc, reg)
                 continue
 
@@ -332,9 +372,17 @@ def run(args) -> None:
                         loader.ingest(record)
                     # enqueue discovered relatives for the next depth level
                     if args.max_depth is None or depth + 1 <= args.max_depth:
-                        frontier.add_many(
-                            [(n["association"], n["regNumber"]) for n in neighbors],
-                            depth=depth + 1, source=f"{assoc}:{reg}")
+                        found = [(n["association"], n["regNumber"]) for n in neighbors]
+                        if scope:
+                            # Cross-registry animals still reach the graph: the
+                            # record carries its cross_refs, and the loader
+                            # builds the Registration and the edge from those
+                            # without anyone having to fetch the page. What is
+                            # dropped here is only the animal's own detail --
+                            # and the entire subtree hanging off it, which is
+                            # what turns one breed's crawl into all of them.
+                            found = [n for n in found if n[0].upper() == scope]
+                        frontier.add_many(found, depth=depth + 1, source=f"{assoc}:{reg}")
 
                 frontier.mark_done(assoc, reg)
                 processed += 1
@@ -401,6 +449,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delay", type=float, default=2.0, help="Seconds between requests (be polite).")
     p.add_argument("--timeout", type=int, default=30)
     p.add_argument("--max-attempts", type=int, default=3, help="Retries before marking failed.")
+    p.add_argument("--stay-in-association", action="store_true",
+                   help="Only follow relatives within --association. A pedigree cites "
+                        "other registries and DigitalBeef serves ten of them, so "
+                        "unscoped the crawl walks out of its own breed and into the "
+                        "rest. Cross-registry links still reach the graph via the "
+                        "record's cross_refs; only the foreign animal's own page is "
+                        "skipped.")
+    p.add_argument("--skip-foreign", action="store_true",
+                   help="One-off: park every pending animal from another association "
+                        "as skipped. Use with --stay-in-association to drain a "
+                        "frontier that already sprawled. Reversible with "
+                        "--reset-skipped.")
     p.add_argument("--no-epds", action="store_true",
                    help="Skip the EPDs tab. One request per animal saved (a fifth of "
                         "the crawl's traffic) at the cost of the EPD figures on the "
@@ -421,7 +481,8 @@ def main(argv=None):
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    if not (args.seed or args.seeds_file or args.enumerate or args.retry_failed or args.reset_skipped):
+    if not (args.seed or args.seeds_file or args.enumerate or args.retry_failed
+            or args.reset_skipped or args.skip_foreign):
         # No new work specified — resume whatever is already pending.
         log.info("No seeds given; resuming existing frontier in %s", args.db)
     run(args)

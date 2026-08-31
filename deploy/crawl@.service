@@ -8,6 +8,17 @@
 # robots-respecting run had passed over. Under Restart=always it would re-run
 # on every restart, so keep it a manual command instead.
 #
+# --stay-in-association keeps each crawler inside its own breed. Without it a
+# cited registration in another registry is enqueued and followed, and since
+# DigitalBeef serves ten associations the CHIA crawler ends up walking
+# Simmental and Hereford -- three crawlers racing each other into the same
+# neighbouring breeds. Cross-registry links still reach the graph from the
+# record's cross_refs, so nothing is lost but the foreign animal's own page.
+#
+# --skip-foreign is NOT here, for the same reason --reset-skipped is not: it is
+# a one-off that would re-run on every restart. Park an already-sprawled
+# frontier by hand, once, per breed.
+#
 # --no-epds drops one of the five requests each animal costs. The EPD figures
 # are stored on the Registration node and read by nextjs-read, so this is a
 # deliberate trade: a fifth of the traffic, and the sleep that goes with it,
@@ -34,6 +45,7 @@ ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
     --ignore-robots \
     --skip-steers \
     --no-epds \
+    --stay-in-association \
     --delay ${CRAWL_DELAY} \
     --user-agent "${CRAWL_UA}"
 
