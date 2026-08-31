@@ -1,4 +1,6 @@
 import { getStore } from '@netlify/blobs';
+import { toSeries } from '../lib/history.mjs';
+import { sparkline, panel, geometry } from '../lib/chart.mjs';
 
 /**
  * netlify.toml [[headers]] apply to static assets, not to what a function
@@ -33,8 +35,11 @@ export default async (request) => {
   const entries = (await Promise.all(
     blobs.map(({ key }) => store.get(key, { type: 'json' }).catch(() => null)),
   )).filter(Boolean);
+  // A board with no history is the normal state for the first ten minutes
+  // after a deploy, so a missing blob is not an error.
+  const history = await store.get('history', { type: 'json' }).catch(() => null);
 
-  const summary = summarize(entries);
+  const summary = summarize(entries, history);
 
   if (new URL(request.url).pathname.endsWith('.json')) {
     return new Response(JSON.stringify(summary, null, 2), {
@@ -52,7 +57,7 @@ export default async (request) => {
  * board that has stopped moving is the single thing this page exists to
  * show -- a crawler that dies does not error, its numbers just stop.
  */
-export function summarize(entries) {
+export function summarize(entries, history = null) {
   const now = Date.now();
   const byAssoc = new Map();
   let publishedAt = null;
@@ -75,6 +80,7 @@ export function summarize(entries) {
   }
 
   const inGraph = graph?.by_association ?? {};
+  const series = toSeries(history);
 
   const boards = [...byAssoc.values()].map((b) => {
     const ageSec = b.updated_at ? Math.round((now - Date.parse(b.updated_at)) / 1000) : null;
@@ -88,6 +94,7 @@ export function summarize(entries) {
       // records are still waiting to get there.
       graphed: g ? Number(g.registrations) || 0 : null,
       behind: g ? Number(g.behind) || 0 : null,
+      series: series[b.association] ?? [],
       // A crawler writes its status file on every animal, so ~17s at 3.5/min.
       // Five minutes of silence means it is gone, not slow.
       stale: ageSec === null || ageSec > 300,
@@ -128,6 +135,7 @@ export function summarize(entries) {
     // The box publishes every 60s; five minutes of silence means the box
     // itself is the problem, not any one crawler.
     reporting: publishAgeSec !== null && publishAgeSec < 300,
+    series: series.overall ?? [],
     graph,
     graphAgeSec,
     loading,
@@ -155,6 +163,55 @@ const dur = (days) => {
   if (days < 70) return `${(days / 7).toFixed(1)} wks`;
   return `${(days / 30.44).toFixed(1)} mo`;
 };
+
+/**
+ * The overall chart, its legend, and the table that carries the same numbers
+ * without a pointer.
+ *
+ * Two points is the minimum that can be a line; below that the panel says what
+ * it is waiting for rather than drawing a dot and calling it a trend. That is
+ * the normal state for the first ten minutes after a deploy.
+ */
+function trend(s) {
+  const pts = s.series ?? [];
+  if (pts.length < 2) {
+    return `<p class="foot collecting">Progress over time appears here once the
+      board has a few readings &mdash; one every ten minutes.</p>`;
+  }
+
+  const spanHours = (pts[pts.length - 1].t - pts[0].t) / 3600;
+  const span = spanHours < 48 ? `${Math.max(1, Math.round(spanHours))} hours`
+    : `${Math.round(spanHours / 24)} days`;
+
+  // Newest first: the recent end is what a reader checks.
+  const rows = [...pts].reverse().slice(0, 24).map((p) => `<tr>
+      <td>${esc(when(p.t))}</td><td>${num(p.done)}</td><td>${num(p.pending)}</td></tr>`).join('');
+
+  // Two facets, each one series on its own scale. Each is titled, so neither
+  // needs a legend box of its own -- a box with one swatch restates the title.
+  return `<figure class="chart">
+    <figcaption><span class="ctitle">All registries, last ${esc(span)}</span></figcaption>
+    <div class="plot">
+      <p class="ptitle"><i class="key rec"></i>Recorded</p>
+      ${panel(pts, 'done', { label: 'Recorded' })}
+      <p class="ptitle"><i class="key rem"></i>Remaining</p>
+      ${panel(pts, 'pending', { label: 'Remaining', xAxis: true })}
+      <div class="tip" hidden></div>
+      <script type="application/json" class="chart-geom">${JSON.stringify(geometry(pts))}</script>
+    </div>
+    <details class="numbers">
+      <summary>Show the numbers</summary>
+      <div class="tscroll"><table>
+        <thead><tr><th>Time</th><th>Recorded</th><th>Remaining</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </details>
+  </figure>`;
+}
+
+const when = (t) => new Date(t * 1000).toLocaleString('en-US', {
+  month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+});
 
 /**
  * Why nothing is being written, in the words that name the thing to go and
@@ -193,8 +250,10 @@ export function renderHtml(s) {
       <p class="pct"><b>${(Number(b.pct) || 0).toFixed(1)}%</b> of known herd</p>
 
       <dl class="figures">
-        <div><dt>Recorded</dt><dd>${num(b.done)}</dd></div>
-        <div><dt>Remaining</dt><dd>${num(b.pending)}</dd></div>
+        <div><dt><i class="key rec"></i>Recorded</dt><dd>${num(b.done)}</dd>
+          ${sparkline(b.series, 'done')}</div>
+        <div><dt><i class="key rem"></i>Remaining</dt><dd>${num(b.pending)}</dd>
+          ${sparkline(b.series, 'pending')}</div>
         <div><dt>Rate</dt><dd>${esc(b.rate_per_min ?? 0)}<span class="unit">/min</span></dd></div>
         <div><dt>Finishes</dt><dd>${b.etaDays !== null
           ? `${b.etaDays}<span class="unit">d</span>` : '&mdash;'}</dd></div>
@@ -242,6 +301,12 @@ export function renderHtml(s) {
     --rule:#e2d6c0; --rule-soft:#efe6d5;
     --tan:#a8763a; --wheat:#d8b56a;
     --pasture:#4a7c4e; --barn:#a33a2c;
+    /* Chart series. Harvest amber and denim -- warm/cool, so they separate
+       under protan and deutan where the board's green and tan do not (that
+       pair measures 3.6 dE simulated, 13.5 unsimulated: indistinguishable).
+       Both steps pass the lightness band, chroma floor, CVD separation and
+       contrast checks against the card surface. */
+    --rec:#b0700f; --rem:#2f6ea8;
     --shadow:0 1px 2px rgba(60,42,20,.05), 0 6px 16px -10px rgba(60,42,20,.22);
   }
   @media (prefers-color-scheme:dark){
@@ -250,6 +315,9 @@ export function renderHtml(s) {
       --rule:#3a2f20; --rule-soft:#2b2318;
       --tan:#c99553; --wheat:#e0bd76;
       --pasture:#77b07a; --barn:#e0786a;
+      /* Re-stepped for the dark surface rather than flipped: the light steps
+         sit outside the dark lightness band. */
+      --rec:#bf8526; --rem:#4a8ec9;
       --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 18px -12px rgba(0,0,0,.7);
     }
   }
@@ -411,6 +479,67 @@ export function renderHtml(s) {
   .defects li.carrier{border-color:var(--barn); color:var(--barn)}
   .defects li.carrier b{color:var(--barn)}
 
+  /* ---------- charts ---------- */
+  /* The line-key is how a number ties to a line. Text never wears the series
+     colour -- a mark beside it carries the identity instead. */
+  .key{
+    display:inline-block; width:10px; height:2px; border-radius:1px;
+    margin-right:.4em; vertical-align:middle;
+  }
+  .key.rec{background:var(--rec)} .key.rem{background:var(--rem)}
+
+  .spark{display:block; width:100%; height:auto; margin:.3rem 0 0}
+
+  .chart{margin:0 0 1.4rem; padding:1.1rem 1rem .9rem;
+    background:var(--card); border:1px solid var(--rule); border-radius:.85rem;
+    box-shadow:var(--shadow);
+  }
+  .chart figcaption{
+    display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
+    gap:.4rem .9rem; margin:0 0 .8rem;
+  }
+  .ctitle{font-size:.78rem; color:var(--dim); letter-spacing:.04em}
+  .legend{display:flex; gap:.9rem; font-size:.72rem; color:var(--dim)}
+  .plot{position:relative}
+  .ptitle{
+    margin:.2rem 0 .1rem; color:var(--dim); font-size:.7rem;
+    letter-spacing:.08em; text-transform:uppercase;
+  }
+  .trend{display:block; width:100%; height:auto; overflow:visible}
+  /* The chart is a focus stop (arrow keys walk the readout), so it needs a
+     ring that belongs to the page rather than the browser's default black. */
+  .trend:focus{outline:none}
+  .trend:focus-visible{outline:2px solid var(--tan); outline-offset:3px; border-radius:.3rem}
+  .trend .tick{fill:var(--dim); font-size:9px; font-variant-numeric:tabular-nums}
+  .trend .endlab{fill:var(--ink); font-size:10px; font-weight:600;
+    font-variant-numeric:tabular-nums}
+
+  /* Values lead, series names follow -- the reader already knows the series. */
+  .tip{
+    position:absolute; pointer-events:none; z-index:2; min-width:8.5rem;
+    background:var(--card); border:1px solid var(--rule); border-radius:.5rem;
+    padding:.5rem .6rem; box-shadow:var(--shadow); font-size:.75rem;
+    transform:translate(-50%,-105%);
+  }
+  .tip .tw{color:var(--dim); font-size:.68rem; margin-bottom:.3rem}
+  .tip .tr{display:flex; align-items:center; gap:.4rem; line-height:1.5}
+  .tip .tv{font-weight:600; font-variant-numeric:tabular-nums; margin-left:auto}
+
+  .numbers{margin-top:.7rem}
+  .numbers summary{
+    cursor:pointer; color:var(--dim); font-size:.72rem; letter-spacing:.04em;
+  }
+  .tscroll{overflow-x:auto; margin-top:.5rem}
+  .numbers table{border-collapse:collapse; width:100%; font-size:.74rem}
+  .numbers th, .numbers td{
+    text-align:right; padding:.28rem .5rem; border-bottom:1px solid var(--rule-soft);
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .numbers th:first-child, .numbers td:first-child{text-align:left}
+  .numbers th{color:var(--dim); font-weight:600}
+
+  .collecting{margin:0 0 1.4rem}
+
   .foot{
     margin:1.75rem 0 0; text-align:center; color:var(--dim);
     font-size:.72rem; line-height:1.6;
@@ -452,6 +581,8 @@ export function renderHtml(s) {
     ${s.disk ? `<div><dt>Disk free</dt><dd>${esc(s.disk.free_gb)}G</dd></div>` : ''}
   </dl>
 
+  ${trend(s)}
+
   <div class="grid">${cards || '<p class="foot">Nothing published yet.</p>'}</div>
 
   <div class="sect"><h2>The graph</h2>
@@ -484,6 +615,102 @@ export function renderHtml(s) {
   var main = document.querySelector('main');
   var timer = null, failures = 0;
 
+  // ---- hover layer -------------------------------------------------------
+  // The crosshair finds the X: a reader aims at a time, never at a 2px line,
+  // and one tooltip lists both series so the pointer never has to land on a
+  // stroke. Re-attached after every refresh, because the swap below replaces
+  // the chart node this closed over.
+  function initChart() {
+    var plot = main.querySelector('.plot');
+    if (!plot) return;
+    var svgs = [].slice.call(plot.querySelectorAll('svg.trend'));
+    var geomEl = plot.querySelector('.chart-geom');
+    var tip = plot.querySelector('.tip');
+    if (!svgs.length || !geomEl || !tip) return;
+
+    var g = JSON.parse(geomEl.textContent);
+    // The facets share an x domain, so one pointer drives both crosshairs and
+    // a single readout lists both series -- the reader never has to hover the
+    // right panel to get the other number.
+    var hairs = svgs.map(function (s) { return s.querySelector('.crosshair'); });
+    var idx = -1;
+
+    function show(i) {
+      if (i < 0 || i >= g.points.length) return;
+      idx = i;
+      var p = g.points[i];
+      var x = g.plot[0] + ((p[0] - g.t0) / Math.max(1, g.t1 - g.t0)) * (g.plot[1] - g.plot[0]);
+      hairs.forEach(function (hair) {
+        hair.setAttribute('x1', x); hair.setAttribute('x2', x);
+        hair.setAttribute('opacity', '1');
+      });
+
+      // textContent throughout: these are numbers today, but a tooltip built
+      // by string concatenation is a habit that goes wrong the moment a label
+      // comes from data.
+      tip.textContent = '';
+      var when = document.createElement('div');
+      when.className = 'tw';
+      when.textContent = new Date(p[0] * 1000).toLocaleString();
+      tip.appendChild(when);
+      [['rec', 'Recorded', p[1]], ['rem', 'Remaining', p[2]]].forEach(function (row) {
+        var r = document.createElement('div');
+        r.className = 'tr';
+        var k = document.createElement('i');
+        k.className = 'key ' + row[0];
+        var name = document.createElement('span');
+        name.textContent = row[1];
+        var val = document.createElement('span');
+        val.className = 'tv';
+        val.textContent = row[2].toLocaleString('en-US');
+        r.appendChild(k); r.appendChild(name); r.appendChild(val);
+        tip.appendChild(r);
+      });
+
+      var rect = svgs[0].getBoundingClientRect();
+      var box = plot.getBoundingClientRect();
+      tip.style.left = (x / g.w) * rect.width + 'px';
+      tip.style.top = (rect.bottom - box.top) + 'px';
+      tip.hidden = false;
+    }
+
+    function hide() {
+      tip.hidden = true;
+      hairs.forEach(function (h) { h.setAttribute('opacity', '0'); });
+      idx = -1;
+    }
+
+    function nearest(clientX) {
+      var rect = svgs[0].getBoundingClientRect();
+      var xUser = ((clientX - rect.left) / rect.width) * g.w;
+      var frac = (xUser - g.plot[0]) / (g.plot[1] - g.plot[0]);
+      var t = g.t0 + frac * (g.t1 - g.t0);
+      var best = 0, bestD = Infinity;
+      for (var i = 0; i < g.points.length; i++) {
+        var d = Math.abs(g.points[i][0] - t);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return best;
+    }
+
+    svgs.forEach(function (svg) {
+      svg.addEventListener('pointermove', function (e) { show(nearest(e.clientX)); });
+      svg.addEventListener('pointerleave', hide);
+    });
+
+    // Keyboard gets the same readout as the pointer, on one focus stop rather
+    // than one per facet -- they show the same instant either way.
+    var svg = svgs[0];
+    svg.setAttribute('tabindex', '0');
+    svg.addEventListener('focus', function () { show(g.points.length - 1); });
+    svg.addEventListener('blur', hide);
+    svg.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { show(Math.max(0, (idx < 0 ? g.points.length - 1 : idx) - 1)); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { show(Math.min(g.points.length - 1, idx + 1)); e.preventDefault(); }
+      else if (e.key === 'Escape') { hide(); }
+    });
+  }
+
   async function tick() {
     // A tab left open overnight would otherwise keep billing function
     // invocations against a page nobody is looking at.
@@ -496,7 +723,17 @@ export function renderHtml(s) {
       if (!res.ok) throw new Error(res.status);
       var doc = new DOMParser().parseFromString(await res.text(), 'text/html');
       var fresh = doc.querySelector('main');
-      if (fresh) { main.innerHTML = fresh.innerHTML; failures = 0; }
+      if (fresh) {
+        // Don't yank the table open under someone reading it, and don't
+        // reset the chart while they are hovering it.
+        var open = main.querySelector('.numbers[open]');
+        var hovering = main.querySelector('.tip:not([hidden])');
+        if (hovering) return;
+        main.innerHTML = fresh.innerHTML;
+        if (open) { var d = main.querySelector('.numbers'); if (d) d.open = true; }
+        initChart();
+        failures = 0;
+      }
     } catch (e) {
       // Back off rather than hammering a site that is having a bad time; the
       // "published Ns ago" line ages visibly in the meantime, so a stalled
@@ -504,6 +741,8 @@ export function renderHtml(s) {
       if (++failures >= 3 && timer) { clearInterval(timer); timer = null; }
     }
   }
+
+  initChart();
 
   function start() { if (!timer) timer = setInterval(tick, PERIOD); }
   document.addEventListener('visibilitychange', function () {

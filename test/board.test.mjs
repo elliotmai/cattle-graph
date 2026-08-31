@@ -67,6 +67,43 @@ test('the newest graph reading wins when two boxes publish', () => {
   assert.equal(s.graph.animals, 268112);
 });
 
+const history = (n = 40, stepSec = 600) => ({
+  points: Array.from({ length: n }, (_, i) => {
+    const t = Math.floor(Date.now() / 1000) - (n - 1 - i) * stepSec;
+    return { t, b: { CHIA: [100000 + i * 50, 250000 - i * 50] } };
+  }),
+});
+
+test('history becomes per-association and overall series', () => {
+  const s = summarize([entry()], history());
+  assert.equal(s.series.length, 40);
+  assert.equal(s.boards[0].series.length, 40);
+  // Overall is summed per point, not from the association totals.
+  assert.equal(s.series[0].done, 100000);
+  assert.equal(s.series[39].done, 101950);
+});
+
+test('the charts are faceted, one scale per series, with a table twin', () => {
+  const html = renderHtml(summarize([entry()], history()));
+  // Two panels, not two lines on one plot: recorded near 100k and remaining
+  // near 250k on a shared scale would be two flat lines a third apart.
+  const panels = html.match(/svg class="trend"/g) ?? [];
+  assert.equal(panels.length, 2);
+  assert.match(html, /data-key="done"/);
+  assert.match(html, /data-key="pending"/);
+  // Tooltips enhance, never gate: the numbers are reachable without a pointer.
+  assert.match(html, /Show the numbers/);
+  assert.match(html, /<th>Recorded<\/th>/);
+  // And each card carries its own pair of sparklines.
+  assert.equal((html.match(/class="spark"/g) ?? []).length, 2);
+});
+
+test('one reading is not a trend', () => {
+  const html = renderHtml(summarize([entry()], history(1)));
+  assert.doesNotMatch(html, /svg class="trend"/);
+  assert.match(html, /Progress over time appears here/);
+});
+
 test('the page names both totals without reusing one word for both', () => {
   const html = renderHtml(summarize([entry()]));
   // Records crawled and distinct animals in the graph are different facts;
