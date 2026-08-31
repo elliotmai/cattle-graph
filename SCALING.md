@@ -87,6 +87,46 @@ while raising throughput about a quarter — the saved sleep and the saved
 round-trip both come back as animals. Lowering `--delay` on top of that trades
 in the other direction: it buys speed by spending request rate.
 
+## Keep each crawler in its own breed
+
+DigitalBeef serves ten associations, and a pedigree freely cites registrations
+in the others. Unscoped, following those citations walks a crawler clean out of
+the breed it was started for: the Chianina run picks up a Simmental sire, then
+that animal's pedigree and progeny, and three crawlers end up racing each other
+through the same neighbouring registries. `--association` alone does **not**
+prevent this — it only sets the default for bare seeds.
+
+The symptom is a frontier that grows faster than it drains:
+
+```bash
+sqlite3 frontier_CHIA.db "select status, count(*) from queue group by status"
+sleep 600
+sqlite3 frontier_CHIA.db "select status, count(*) from queue group by status"
+```
+
+If `pending` holds steady or rises while `done` climbs, every animal is
+discovering at least one more and the crawl has no finish line. Break it down
+by registry — `select association, count(*) from queue where status='pending'
+group by association order by 2 desc` — and the foreign breeds are usually most
+of it.
+
+`--stay-in-association` follows only relatives in the crawler's own registry.
+Cross-breed joins are unaffected: the record still carries its `cross_refs`,
+and the loader builds the Registration node and the edge from those without
+anyone fetching the page. What is dropped is the foreign animal's own detail,
+and the entire subtree hanging off it.
+
+For a frontier that already sprawled, park the foreign rows once:
+
+```bash
+sudo systemctl stop crawl@CHIA
+python crawl.py --association CHIA --db frontier_CHIA.db --skip-foreign --add-seeds-only
+sudo systemctl start crawl@CHIA
+```
+
+Parked, not deleted — `--reset-skipped` puts them back if you ever widen the
+scope again.
+
 ## Be a good citizen
 
 Respect each association's Terms of Service and robots.txt (honored by default).
