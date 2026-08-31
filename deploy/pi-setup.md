@@ -140,9 +140,20 @@ it's the courteous thing and it's what associations ask for.
 sudo tee /etc/cattle-graph.env >/dev/null <<'EOF'
 CRAWL_DELAY=3.0
 CRAWL_UA=cattle-graph crawler (you@example.com)
+
+# Optional: set these to load each crawled record straight into Neo4j Aura as
+# it is fetched (live load). Leave them unset/commented to write JSONL only and
+# load elsewhere (step 8). Use your neo4j+s:// Aura URI.
+#NEO4J_URI=neo4j+s://xxxxxxxx.databases.neo4j.io
+#NEO4J_USER=neo4j
+#NEO4J_PASSWORD=your-aura-password
 EOF
 sudo chmod 600 /etc/cattle-graph.env
 ```
+
+`chmod 600` matters: with live load configured, this file holds your Aura
+password. Never commit it, and prefer resetting the Aura password if it has ever
+been pasted somewhere it could be logged.
 
 ## 7. Install and start the service
 
@@ -170,30 +181,47 @@ still challenges (403/429), the crawler backs off and, after 5 in a row, exits
 
 ## 8. Get the crawled data into Neo4j
 
-The Pi writes `data_CHIA.jsonl` and archives pages under `html/`. Two ways to
-load it:
+The Pi writes `data_CHIA.jsonl` and archives pages under `html/`. Pick how it
+reaches the graph.
 
-- **Ship the JSONL to wherever your loader/dashboard runs** (keeps Neo4j
-  credentials off the Pi — matches the split the rest of `deploy/` uses):
+### 8a. Live load into Aura (recommended for a Pi with no dashboard)
 
-  ```bash
-  rsync -avz /opt/cattle-graph/data_CHIA.jsonl \
-      user@loader-box:/opt/cattle-graph/data_CHIA.jsonl
-  ```
+Set the `NEO4J_*` vars in `/etc/cattle-graph.env` (step 6) and the crawl service
+loads each record into Aura as it is fetched — `loader.py` has no follow/offset
+mode, so per-record live loading is what keeps the graph current from the Pi
+without repeatedly re-reading the growing JSONL.
 
-  The dashboard's auto-loader tails the file into Neo4j from there. A cron on
-  the Pi can rsync every few minutes.
+```bash
+sudo nano /etc/cattle-graph.env        # uncomment + fill NEO4J_URI / _USER / _PASSWORD
+sudo systemctl restart crawl-pi@CHIA
+journalctl -u crawl-pi@CHIA -f          # you should see records being written to Neo4j
+```
 
-- **Or load directly from the Pi to Neo4j Aura** (internet reaches Aura fine):
+First, **catch up** whatever was crawled before live load was on — one loader
+run over the existing file (idempotent; it MERGEs on International ID). Run it as
+**one line** so the shell doesn't split the arguments:
 
-  ```bash
-  cd /opt/cattle-graph
-  .venv/bin/python loader.py data_CHIA.jsonl --neo4j \
-      --uri "neo4j+s://<your-aura-host>" --user neo4j --password '<pw>'
-  ```
+```bash
+cd /opt/cattle-graph && .venv/bin/python loader.py data_CHIA.jsonl --neo4j --uri "neo4j+s://<your-aura-host>.databases.neo4j.io" --user neo4j --password '<aura-password>' --skip-steers
+```
 
-  This puts the Aura password on the Pi; prefer the rsync path if you'd rather
-  it live in one place.
+Trade-off (why the Lightsail units don't do this): crawl.py takes `--password`
+as an argument, so during a live-load run the Aura password is visible in `ps`
+to a local user. Fine on a single-user home Pi; if it isn't, use 8b instead and
+leave `NEO4J_URI` unset.
+
+### 8b. Or ship the JSONL to a box that already loads it
+
+Keeps Aura credentials off the Pi — matches the split the rest of `deploy/`
+uses. Leave `NEO4J_URI` unset so the crawl writes JSONL only, then:
+
+```bash
+rsync -avz /opt/cattle-graph/data_CHIA.jsonl \
+    user@loader-box:/opt/cattle-graph/data_CHIA.jsonl
+```
+
+The dashboard's auto-loader tails the file into Neo4j from there. A cron on the
+Pi can rsync every few minutes.
 
 ## 9. Add the other DigitalBeef breeds (optional)
 

@@ -11,12 +11,14 @@
 #
 # This differs from crawl@.service only where the Pi differs:
 #   - User/Group is your Pi login, not `ubuntu` (pi-setup.md fills it in).
-#   - No Neo4j here either: the unit writes data_%i.jsonl and nothing more.
-#     Loading into the graph happens wherever your loader/dashboard runs; ship
-#     the JSONL there (pi-setup.md) or add --neo4j by hand for a direct load.
+#   - ExecStart calls deploy/crawl-run.sh, which builds the crawl.py command and
+#     turns on live loading into Aura ONLY when NEO4J_URI is set in the env file.
+#     Leave it unset to write data_%i.jsonl only and load elsewhere; set it to
+#     load each record into Neo4j as it is fetched. See deploy/pi-setup.md.
 #
-# Flag choices are kept identical to crawl@.service so the Pi produces records
-# the dedup loader merges cleanly with what the other crawlers wrote:
+# Flag choices (in crawl-run.sh) are kept identical to crawl@.service so the Pi
+# produces records the dedup loader merges cleanly with what the other crawlers
+# wrote:
 #   --stay-in-association  keep the CHIA crawler inside Chianina, not walking
 #                          the ten other breeds DigitalBeef serves.
 #   --skip-steers          match the loader, which passes --skip-steers.
@@ -44,18 +46,9 @@ User=__CRAWL_USER__
 Group=__CRAWL_USER__
 WorkingDirectory=/opt/cattle-graph
 EnvironmentFile=/etc/cattle-graph.env
-ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
-    --association %i \
-    --out /opt/cattle-graph/data_%i.jsonl \
-    --db /opt/cattle-graph/frontier_%i.db \
-    --status-file /opt/cattle-graph/status_%i.json \
-    --ignore-robots \
-    --skip-steers \
-    --no-epds \
-    --stay-in-association \
-    --html-store /opt/cattle-graph/html \
-    --delay ${CRAWL_DELAY} \
-    --user-agent "${CRAWL_UA}"
+# The launcher reads CRAWL_DELAY, CRAWL_UA and the optional NEO4J_* vars from the
+# EnvironmentFile and assembles the crawl.py command. %i is the association code.
+ExecStart=/opt/cattle-graph/deploy/crawl-run.sh %i
 
 # A blocked or rate-limited association should back off, not hot-loop.
 Restart=always
