@@ -61,11 +61,44 @@ bash /opt/cattle-graph/deploy/scale.sh
 ## Running it
 
 ```bash
+./deploy/state.py                     # crawl, loader lag and graph counts
 bash deploy/status.sh                 # the old four-windows view
 journalctl -u crawl@CHIA -f           # one crawler's output
 sudo systemctl restart crawl@MAINE    # safe any time
 bash deploy/load_all.sh               # push into Neo4j, idempotent
 ```
+
+### Is it in Neo4j yet?
+
+Crawling and loading are two different processes, and only the first one is
+visible on the published board:
+
+| | who does it | what it writes |
+|---|---|---|
+| crawl | `crawl@<ASSOC>` | `data_<ASSOC>.jsonl` — **no `--neo4j` in the unit** |
+| load | a thread in `cattle-dashboard` | tails each JSONL every 60s into Neo4j |
+
+So a stopped `cattle-dashboard` — or Auto-load toggled off in the local
+dashboard — leaves the crawlers filling JSONL with nobody reading it, and the
+board keeps showing healthy green cards, because its counts come from the
+crawl frontier rather than from the graph.
+
+`./deploy/state.py` is the command that answers both halves. It exits non-zero
+when anything is wrong, so it also works from a cron or a check:
+
+```
+CRAWL   (frontier -> data_*.jsonl)
+  CHIA   running  done= 103876 pending=  41000 ... read 27s ago  [active]
+LOAD    (data_*.jsonl -> Neo4j, inside cattle-dashboard) [active]
+  MAINE  loaded=   1200 behind=494.9K (~2,800 records)
+GRAPH   (what is actually in Neo4j)
+  CHIA   registrations= 101940  crawled= 103876
+```
+
+`behind` is the honest lag signal: JSONL bytes the loader has not read yet.
+Compare `registrations` to `crawled` for the standing total, but expect it to
+run lower — the loader passes `--skip-steers`, so some crawled records are
+deliberately never loaded.
 
 ## Deliberate choices
 
