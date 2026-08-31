@@ -46,8 +46,39 @@ Same layout as the Lightsail box, so the systemd unit paths match.
 ```bash
 sudo mkdir -p /opt/cattle-graph
 sudo chown "$(id -un)":"$(id -gn)" /opt/cattle-graph
+```
 
-git clone https://github.com/elliotmai/cattle-graph.git /tmp/cg
+This is a **private repo**, so an unauthenticated `https://` clone fails with
+`Password authentication is not supported`. Pick one:
+
+**a) SSH key (recommended — doesn't expire, best for a long-running box):**
+
+```bash
+ssh-keygen -t ed25519 -C "pi-cattle-graph" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub     # add this to GitHub: repo Settings ->
+                              # Deploy keys (read-only), or account SSH keys
+ssh -T git@github.com         # accept the host key the first time
+git clone git@github.com:elliotmai/cattle-graph.git /tmp/cg
+```
+
+**b) Fine-grained token over HTTPS (quick, but expires):** create a token with
+Contents: Read on `elliotmai/cattle-graph`, then
+
+```bash
+git clone https://<YOUR_TOKEN>@github.com/elliotmai/cattle-graph.git /tmp/cg
+```
+
+**c) No GitHub auth on the Pi** — copy the tree from a machine that already has
+it and skip straight to step 4:
+
+```bash
+# from the other machine:
+scp -r /path/to/cattle-graph/. pi@raspberrypi.local:/opt/cattle-graph/
+```
+
+For (a) or (b), finish by checking out this branch and copying it in:
+
+```bash
 git -C /tmp/cg checkout claude/lightsail-dynamic-ip-switching-bqlv4f
 cp -r /tmp/cg/. /opt/cattle-graph/
 ```
