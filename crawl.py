@@ -97,7 +97,7 @@ def write_status(path, association, state, current, counts, processed, start_ts)
         pass
 
 
-def scrape_dispatch(assoc, reg, session, args):
+def scrape_dispatch(assoc, reg, session, args, html_store=None):
     """Route to the right platform adapter and return (url, record, neighbors).
     ANGUS uses the angus.org adapter; everything else is DigitalBeef."""
     if assoc.upper() == "ANGUS":
@@ -112,7 +112,8 @@ def scrape_dispatch(assoc, reg, session, args):
         fetch_epds=not args.no_epds,
         timeout=args.timeout,
         save_html_dir=args.save_html,
-        delay=args.delay)
+        delay=args.delay,
+        html_store=html_store)
     return url, record, neighbors
 
 DEFAULT_UA = ("cattle-graph-crawler/1.0 (research; contact: you@example.com) "
@@ -328,6 +329,12 @@ def run(args) -> int:
     session = db.make_session(args.user_agent)
     robots = None if args.ignore_robots else db.RobotsCache(args.user_agent)
 
+    html_store = None
+    if args.html_store:
+        from htmlstore import HtmlStore
+        html_store = HtmlStore(args.html_store)
+        log.info("Archiving raw pages to %s (gzipped).", args.html_store)
+
     status_assoc = (args.association or "").upper() or "MIXED"
     # None means "crawl whatever the frontier holds" -- the original behaviour.
     scope = status_assoc if (args.stay_in_association and args.association) else None
@@ -368,7 +375,7 @@ def run(args) -> int:
                 continue
 
             try:
-                _url, record, neighbors = scrape_dispatch(assoc, reg, session, args)
+                _url, record, neighbors = scrape_dispatch(assoc, reg, session, args, html_store)
                 record = classify_record(record)      # Free/Carrier/Suspect/Unknown up front
 
                 is_steer = args.skip_steers and (record.get("sex") or "").upper() == "S"
@@ -502,6 +509,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Ignore steers (castrated males): don't store or expand them.")
     p.add_argument("--ignore-robots", action="store_true", help="Skip robots.txt checks (not recommended).")
     p.add_argument("--save-html", help="Directory to dump raw HTML (for refining selectors).")
+    p.add_argument("--html-store",
+                   help="Archive every fetched page here, gzipped and sharded, so a "
+                        "field the parser skipped can be recovered by a local reparse "
+                        "instead of re-crawling. ~10 KB/page; a few GB for a full breed.")
     p.add_argument("--user-agent", default=DEFAULT_UA)
     p.add_argument("-v", "--verbose", action="store_true")
     return p

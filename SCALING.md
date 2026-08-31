@@ -127,6 +127,29 @@ sudo systemctl start crawl@CHIA
 Parked, not deleted — `--reset-skipped` puts them back if you ever widen the
 scope again.
 
+## Keep the pages, reparse for free
+
+The crawler reads each page once, for the fields the graph needs, and drops
+the HTML. So the day you want a field it skipped -- ownership, an identifier,
+an EPD you turned off -- the only way to get it is to crawl every animal
+again, which is the single largest avoidable load you can put on the
+association.
+
+`--html-store DIR` archives every fetched page, gzipped and sharded by
+registration. A 141 KB page compresses to about 10 KB, so a full breed is a
+few GB rather than seventy. Nothing reads it during a crawl -- a pedigree walk
+visits each animal once, so a read cache would be all misses -- but afterwards
+a new field is a local reparse over `HtmlStore.iter_pages()`, at zero
+requests.
+
+```bash
+python crawl.py --association CHIA --db frontier_CHIA.db --html-store ./html ...
+```
+
+The service unit sets this to `/opt/cattle-graph/html`. Storing the pages now
+is what lets you answer "can you also pull X" later without going back to the
+well.
+
 ## When a host says no
 
 403 and 429 are about the client, not the animal. `digitalbeef.fetch` raises

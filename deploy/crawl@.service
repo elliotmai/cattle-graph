@@ -19,6 +19,11 @@
 # a one-off that would re-run on every restart. Park an already-sprawled
 # frontier by hand, once, per breed.
 #
+# --html-store archives every fetched page, gzipped, so a field the parser
+# skipped can be recovered by a local reparse rather than by crawling the
+# association again -- the largest avoidable load on their servers. ~10 KB a
+# page, a few GB for a full breed; ReadWritePaths already covers the dir.
+#
 # --no-epds drops one of the five requests each animal costs. The EPD figures
 # are stored on the Registration node and read by nextjs-read, so this is a
 # deliberate trade: a fifth of the traffic, and the sleep that goes with it,
@@ -46,6 +51,7 @@ ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
     --skip-steers \
     --no-epds \
     --stay-in-association \
+    --html-store /opt/cattle-graph/html \
     --delay ${CRAWL_DELAY} \
     --user-agent "${CRAWL_UA}"
 

@@ -552,7 +552,8 @@ def scrape_animal(association: str, reg: str, session: requests.Session,
                   fetch_progeny: bool = True, timeout: int = 30,
                   save_html_dir: Optional[str] = None,
                   delay: float = 1.0,
-                  fetch_epds: bool = True) -> tuple[dict, list[dict]]:
+                  fetch_epds: bool = True,
+                  html_store=None) -> tuple[dict, list[dict]]:
     """Fetch the container page plus the detail tabs and assemble one record.
 
     Every tab is a separate request against a shared host, so which ones are
@@ -568,6 +569,8 @@ def scrape_animal(association: str, reg: str, session: requests.Session,
     html = fetch(url, session, timeout)
     if save_html_dir:
         _save_html(save_html_dir, assoc, reg, html, "container")
+    if html_store is not None:
+        html_store.save(assoc, reg, "container", html)
 
     record = parse_container(html, assoc, reg, url)
     neighbors: list[dict] = []
@@ -597,6 +600,8 @@ def scrape_animal(association: str, reg: str, session: requests.Session,
             continue
         if save_html_dir:
             _save_html(save_html_dir, assoc, reg, thtml, tab.lstrip("_"))
+        if html_store is not None:
+            html_store.save(assoc, reg, tab.lstrip("_"), thtml)
 
         if tab == "_pedigree":
             sire, dam, ancestors = parse_pedigree(thtml, assoc)

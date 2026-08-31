@@ -27,5 +27,9 @@ crawler.zip
 # Local stdout/stderr from Windows-launched crawlers (systemd uses journald)
 logs/
 
+# The raw-page archive (--html-store). Large, and re-fetchable; belongs in
+# snapshots, not git.
+html/
+
 # Netlify function dependencies
 node_modules/
