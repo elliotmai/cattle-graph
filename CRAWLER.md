@@ -98,6 +98,18 @@ python crawl.py --seed CHIA:MA430053 --out records.jsonl \
   goes to the proxy, which resolves the name itself). Cloudflare-fronted hosts
   (chianina) can rotate IPs — refresh them if a pinned address starts refusing.
 
+## Running from a residential IP to avoid blocking (`deploy/pi-setup.md`)
+
+Cloudflare (which fronts chianina) scores datacenter networks — AWS / Lightsail
+— far more harshly than an ordinary home ISP address, so a cloud crawl gets
+challenged and blocked where a home one is waved through. Running the crawl from
+a Raspberry Pi on your home connection puts it behind a **residential IP**, which
+is the single biggest lever against blocking — more so than rotating IPs within a
+cloud, where every address is a known datacenter range. The catch is that it's
+one home IP that doesn't rotate, so the play is to keep it clean by staying
+polite (the default delay, the resumable frontier, the page archive). See
+`deploy/pi-setup.md` and the `deploy/crawl-pi@.service` unit.
+
 ## Cross-registration linking (one node across platforms)
 
 `registries.py` maps registry prefixes to association codes (`AAA`→ANGUS,
