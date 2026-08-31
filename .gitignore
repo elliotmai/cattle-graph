@@ -6,6 +6,7 @@ frontier_*.db-wal
 frontier_*.db-journal
 status_*.json
 load_offsets.json
+neo_stats.json
 *.log
 
 # Credentials. The Aura creds file in particular must never be committed.

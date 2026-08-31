@@ -68,9 +68,42 @@ fully resumable, so treat it as a background process you top up over time, not a
 single run. Load into Neo4j periodically with `load_all.ps1`; the dedup makes
 re-loading harmless.
 
+## The cost of an animal
+
+Each animal is **five requests**, not one: the container page plus `_pedigree`,
+`_genotype`, `_epds` and `_progeny`. With a delay before each, the tabs dominate
+both the wall clock and the load — which makes *which tabs you fetch* a bigger
+lever than concurrency, and the only lever that can make the crawl faster and
+lighter at the same time.
+
+- `_pedigree` — required. It is what makes the crawl recursive.
+- `_genotype` — required for the defect findings.
+- `_progeny` — what makes a seed fan out to thousands. `--no-progeny` to skip.
+- `_epds` — the EPD figures, stored on the Registration node. `--no-epds` to
+  skip: a fifth of the traffic gone, and nothing else changes.
+
+Dropping `_epds` at the same delay leaves the request rate exactly where it was
+while raising throughput about a quarter — the saved sleep and the saved
+round-trip both come back as animals. Lowering `--delay` on top of that trades
+in the other direction: it buys speed by spending request rate.
+
 ## Be a good citizen
 
 Respect each association's Terms of Service and robots.txt (honored by default).
 Keep `--delay` at 1s or higher, set a real contact in the crawler's user-agent,
-and don't raise per-host concurrency. If you plan a truly exhaustive pull, it's
-worth asking the associations about a data-access agreement.
+and don't raise per-host concurrency.
+
+**The three DigitalBeef breeds are subdomains, not separate servers** —
+`chianina`, `maine-anjou` and `shorthorn` all under `digitalbeef.com`. Check
+with `dig +short chianina.digitalbeef.com maine-anjou.digitalbeef.com` before
+assuming otherwise. If they resolve to one address, the three crawlers share a
+single host's budget and their rates add up: at `--delay 1.0` with `--no-epds`,
+three crawlers come to roughly 1 request/second against that one host, which is
+the ceiling this file has always set. Speeding one breed up spends the same
+budget the other two are drawing on.
+
+If you need to go materially faster, the answer is access rather than
+infrastructure: ask the association about a bulk export or a data-access
+agreement. Standing up more machines to spread the same traffic over more
+addresses is evasion, not scaling — and a platform-wide block would cost you
+all three breeds at once.

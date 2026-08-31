@@ -104,6 +104,7 @@ def scrape_dispatch(assoc, reg, session, args):
     record, neighbors = db.scrape_animal(
         assoc, reg, session,
         fetch_progeny=not args.no_progeny,
+        fetch_epds=not args.no_epds,
         timeout=args.timeout,
         save_html_dir=args.save_html,
         delay=args.delay)
@@ -400,6 +401,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delay", type=float, default=2.0, help="Seconds between requests (be polite).")
     p.add_argument("--timeout", type=int, default=30)
     p.add_argument("--max-attempts", type=int, default=3, help="Retries before marking failed.")
+    p.add_argument("--no-epds", action="store_true",
+                   help="Skip the EPDs tab. One request per animal saved (a fifth of "
+                        "the crawl's traffic) at the cost of the EPD figures on the "
+                        "Registration node; the pedigree walk is unaffected.")
     p.add_argument("--no-progeny", action="store_true",
                    help="Ancestors only (don't expand downward to descendants).")
     p.add_argument("--skip-steers", action="store_true",

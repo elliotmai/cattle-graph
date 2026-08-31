@@ -7,6 +7,11 @@
 # No --reset-skipped either: that was a one-off to re-queue entries a
 # robots-respecting run had passed over. Under Restart=always it would re-run
 # on every restart, so keep it a manual command instead.
+#
+# --no-epds drops one of the five requests each animal costs. The EPD figures
+# are stored on the Registration node and read by nextjs-read, so this is a
+# deliberate trade: a fifth of the traffic, and the sleep that goes with it,
+# against data nothing currently uses. Drop the flag and re-crawl to get them.
 
 [Unit]
 Description=cattle-graph crawler (%i)
@@ -28,6 +33,7 @@ ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
     --status-file /opt/cattle-graph/status_%i.json \
     --ignore-robots \
     --skip-steers \
+    --no-epds \
     --delay ${CRAWL_DELAY} \
     --user-agent "${CRAWL_UA}"
 
