@@ -326,7 +326,12 @@ def run(args) -> int:
         loader = Loader(Neo4jBackend(args.uri, args.user, args.password, insecure=args.insecure),
                         skip_steers=args.skip_steers)
 
-    session = db.make_session(args.user_agent)
+    ip_pins = db.parse_ip_pins(
+        (args.pin_ip or []) + [os.environ.get("DIGITALBEEF_IP_PINS", "")])
+    if ip_pins:
+        log.info("Pinning hosts to IPs (DNS bypassed): %s",
+                 ", ".join(f"{h}->{'/'.join(ips)}" for h, ips in ip_pins.items()))
+    session = db.make_session(args.user_agent, ip_pins)
     robots = None if args.ignore_robots else db.RobotsCache(args.user_agent)
 
     html_store = None
@@ -514,6 +519,14 @@ def build_parser() -> argparse.ArgumentParser:
                         "field the parser skipped can be recovered by a local reparse "
                         "instead of re-crawling. ~10 KB/page; a few GB for a full breed.")
     p.add_argument("--user-agent", default=DEFAULT_UA)
+    p.add_argument("--pin-ip", action="append", metavar="HOST=IP",
+                   help="Reach a DigitalBeef host at a fixed IP instead of via "
+                        "DNS (repeatable; like curl --resolve). SNI, the cert "
+                        "check and the Host header still use the real hostname, "
+                        "so TLS is unchanged. Several IPs: HOST=IP1,IP2 (tried "
+                        "in order). Use bare 'default' for the built-in map "
+                        "(chianina/maine-anjou/shorthorn). Also settable via "
+                        "the DIGITALBEEF_IP_PINS env var.")
     p.add_argument("-v", "--verbose", action="store_true")
     return p
 

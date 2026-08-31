@@ -31,11 +31,13 @@ from __future__ import annotations
 import re
 import time
 import logging
+import threading
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
 from urllib import robotparser
 
 import requests
+from urllib3.util import connection as urllib3_connection
 from bs4 import BeautifulSoup
 
 import registries
@@ -135,9 +137,112 @@ def _retry_after_seconds(value) -> Optional[int]:
     return max(0, n)
 
 
-def make_session(user_agent: str) -> requests.Session:
+# --------------------------------------------------------------------------
+# Direct-IP access (curl --resolve for the crawler)
+# --------------------------------------------------------------------------
+#
+# DigitalBeef's breed subdomains can be unreachable-by-name from where the
+# crawler runs -- a box with no working resolver for them, split-horizon DNS,
+# or a name that briefly stops resolving while the site is up. Pinning the
+# hostname to a known IP sidesteps that: we dial the IP but keep the real
+# hostname for the TLS SNI, the certificate check and the Host header, so the
+# request is byte-for-byte what a normal DNS lookup would have produced and
+# certificate verification is NOT weakened. This is exactly what
+# `curl --resolve host:443:IP` does.
+#
+# chianina sits behind Cloudflare (two anycast IPs); maine-anjou and shorthorn
+# (and the other associations) share DigitalBeef's 'rocky' host. Cloudflare's
+# anycast addresses in particular can rotate, so this is opt-in, not the
+# default -- enable it only where name resolution is the problem, and refresh
+# the IPs if they ever start refusing the connection.
+#
+# The pin acts at socket-connect time, so it applies to DIRECT connections. If
+# the process routes through an HTTPS proxy (HTTPS_PROXY set), the socket goes
+# to the proxy and the proxy does its own name resolution -- pinning is moot
+# there and the host has to be reachable by name (or IP) from the proxy.
+DEFAULT_IP_PINS: dict[str, list[str]] = {
+    "chianina.digitalbeef.com": ["104.21.76.181", "172.67.198.104"],
+    "maine-anjou.digitalbeef.com": ["165.227.220.252"],
+    "shorthorn.digitalbeef.com": ["165.227.220.252"],
+}
+
+_pin_lock = threading.Lock()
+_active_pins: dict[str, list[str]] = {}
+_orig_create_connection = None
+
+
+def parse_ip_pins(specs) -> dict[str, list[str]]:
+    """Parse ``host=ip`` / ``host:ip`` tokens into a {host: [ip, ...]} map.
+
+    A single token may carry several comma-separated IPs (tried in order), and
+    the bare word ``default`` expands to :data:`DEFAULT_IP_PINS`. Accepts a
+    list of tokens or one string of them separated by whitespace/';'/','.
+    """
+    if isinstance(specs, str):
+        specs = re.split(r"[\s;]+", specs.strip())
+    out: dict[str, list[str]] = {}
+    for spec in specs or []:
+        spec = spec.strip()
+        if not spec:
+            continue
+        if spec.lower() == "default":
+            for host, ips in DEFAULT_IP_PINS.items():
+                out.setdefault(host.lower(), []).extend(ips)
+            continue
+        m = re.match(r"^\s*([^=:\s]+)\s*[=:]\s*(.+)$", spec)
+        if not m:
+            raise ValueError(f"Bad --pin-ip spec {spec!r}; expected host=IP[,IP].")
+        host, ip_field = m.group(1).lower(), m.group(2)
+        for ip in re.split(r"[,\s]+", ip_field.strip()):
+            if ip:
+                out.setdefault(host, []).append(ip)
+    return out
+
+
+def _create_connection_pinned(address, *args, **kwargs):
+    """create_connection that redirects pinned hostnames to their IPs, trying
+    each IP in order so a host with several addresses fails over cleanly."""
+    host, port = address
+    ips = _active_pins.get(host.lower()) if isinstance(host, str) else None
+    if not ips:
+        return _orig_create_connection(address, *args, **kwargs)
+    last_err: Exception | None = None
+    for ip in ips:
+        try:
+            return _orig_create_connection((ip, port), *args, **kwargs)
+        except OSError as e:
+            last_err = e
+    raise last_err if last_err else OSError(f"no pinned IP connected for {host}")
+
+
+def pin_host_ips(mapping: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Route the given hostnames to fixed IPs for every requests/urllib3
+    connection in this process, keeping SNI, certificate hostname and the Host
+    header on the real name. Idempotent and additive; returns the active map.
+
+    Installed process-wide (urllib3 resolves through one hook) but scoped by the
+    map -- only listed hosts are redirected; everything else resolves normally.
+    """
+    global _orig_create_connection
+    if not mapping:
+        return dict(_active_pins)
+    with _pin_lock:
+        for host, ips in mapping.items():
+            _active_pins.setdefault(host.lower(), [])
+            for ip in ips:
+                if ip not in _active_pins[host.lower()]:
+                    _active_pins[host.lower()].append(ip)
+        if _orig_create_connection is None:
+            _orig_create_connection = urllib3_connection.create_connection
+            urllib3_connection.create_connection = _create_connection_pinned
+        return dict(_active_pins)
+
+
+def make_session(user_agent: str, ip_pins: dict[str, list[str]] | None = None) -> requests.Session:
     s = requests.Session()
     s.headers.update({"User-Agent": user_agent})
+    if ip_pins:
+        pin_host_ips(ip_pins)
     return s
 
 

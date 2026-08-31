@@ -76,6 +76,28 @@ python crawl.py --association CHIA --seed MA430053 --out records.jsonl \
   delay for big sweeps.
 - Set a real contact address in `--user-agent`.
 
+## Reaching a host by IP when DNS won't (`--pin-ip`)
+
+Where the crawler runs somewhere that can't resolve the DigitalBeef subdomains
+(no working resolver for them, split-horizon DNS, a name that briefly stops
+resolving while the site is up), pin the hostname to a known IP — the same idea
+as `curl --resolve host:443:IP`:
+
+```
+python crawl.py --seed CHIA:MA430053 --out records.jsonl \
+    --pin-ip chianina.digitalbeef.com=104.21.76.181,172.67.198.104
+```
+
+- The socket dials the pinned IP, but the TLS SNI, the certificate check and the
+  `Host` header still use the real hostname, so verification is **not** weakened.
+- Several IPs per host are tried in order (failover); repeat `--pin-ip` for more
+  hosts. `--pin-ip default` loads the built-in map for chianina / maine-anjou /
+  shorthorn. The same specs can go in the `DIGITALBEEF_IP_PINS` env var (handy
+  for the systemd units).
+- It acts at connect time, so it does nothing behind an HTTPS proxy (the tunnel
+  goes to the proxy, which resolves the name itself). Cloudflare-fronted hosts
+  (chianina) can rotate IPs — refresh them if a pinned address starts refusing.
+
 ## Cross-registration linking (one node across platforms)
 
 `registries.py` maps registry prefixes to association codes (`AAA`→ANGUS,
