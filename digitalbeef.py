@@ -109,6 +109,32 @@ def progeny_url(association: str, reg: str) -> str:
 # HTTP session + robots
 # --------------------------------------------------------------------------
 
+class Blocked(Exception):
+    """The host refused us, rather than the animal being missing or broken.
+
+    403 and 429 are about the client, not the registration -- retrying the next
+    animal just knocks again, faster, because a refusal costs one request where
+    a successful crawl costs four. Raised as its own type so the crawl loop can
+    stop instead of grinding the whole frontier into `failed`.
+    """
+
+    def __init__(self, status: int, retry_after=None, url: str = ""):
+        self.status = status
+        self.retry_after = retry_after
+        self.url = url
+        super().__init__(f"{status} refused for {url}")
+
+
+def _retry_after_seconds(value) -> Optional[int]:
+    """Retry-After as whole seconds. The HTTP-date form is ignored rather than
+    guessed at -- the caller's own backoff covers it."""
+    try:
+        n = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return max(0, n)
+
+
 def make_session(user_agent: str) -> requests.Session:
     s = requests.Session()
     s.headers.update({"User-Agent": user_agent})
@@ -140,6 +166,9 @@ class RobotsCache:
 
 def fetch(url: str, session: requests.Session, timeout: int = 30) -> str:
     resp = session.get(url, timeout=timeout)
+    if resp.status_code in (403, 429):
+        raise Blocked(resp.status_code,
+                      _retry_after_seconds(resp.headers.get("Retry-After")), url)
     resp.raise_for_status()
     return resp.text
 

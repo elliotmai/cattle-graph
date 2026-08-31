@@ -127,6 +127,27 @@ sudo systemctl start crawl@CHIA
 Parked, not deleted — `--reset-skipped` puts them back if you ever widen the
 scope again.
 
+## When a host says no
+
+403 and 429 are about the client, not the animal. `digitalbeef.fetch` raises
+`Blocked` for both, and the crawl loop treats a refusal as a reason to stop
+rather than as a per-animal failure:
+
+- The animal is **not** marked failed and its attempts are not burned — it
+  stays pending, so nothing is lost when access is restored.
+- Each refusal backs off (`Retry-After` when the host sends one, otherwise
+  30s, 60s, 90s…), and after `--max-blocked` in a row the crawler exits **75**.
+- The unit sets `RestartPreventExitStatus=75`, so a blocked crawler stays
+  down. Without it `Restart=always` puts it back into the same wall every
+  minute — and a blocked crawler knocks *faster* than a working one, because
+  a refusal costs one request where a successful animal costs four.
+- The status file records `state: blocked`, so the board shows it rather than
+  the crawler simply going quiet.
+
+Getting blocked is a signal to talk to the association, not to change IP or
+user-agent. `systemctl start crawl@<ASSOC>` once access is sorted; the frontier
+picks up where it stopped.
+
 ## Be a good citizen
 
 Respect each association's Terms of Service and robots.txt (honored by default).

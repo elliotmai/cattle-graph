@@ -51,6 +51,11 @@ from loader import norm_defect_status
 
 log = logging.getLogger("crawl")
 
+# Exit code for "the host is refusing us". The systemd unit pairs this with
+# RestartPreventExitStatus, so a blocked crawler stays down instead of being
+# restarted into the same wall every RestartSec.
+EXIT_BLOCKED = 75
+
 
 def classify_record(record: dict) -> dict:
     """Normalize genetic-test results to Free/Carrier/Suspect/Unknown up front,
@@ -269,7 +274,7 @@ def parse_seed(token: str, default_assoc: str) -> tuple[str, str]:
     return default_assoc.upper(), token.strip()
 
 
-def run(args) -> None:
+def run(args) -> int:
     frontier = Frontier(args.db)
 
     # --- seed injection (the "fill gaps" entry point) ---
@@ -334,6 +339,8 @@ def run(args) -> None:
     start_ts = time.time()
     last_current = None
     processed = 0
+    blocked = 0                  # consecutive refusals
+    final_state = "idle"
     write_status(args.status_file, status_assoc, "running", None, frontier.counts(), 0, start_ts)
     try:
         while True:
@@ -386,12 +393,31 @@ def run(args) -> None:
 
                 frontier.mark_done(assoc, reg)
                 processed += 1
+                blocked = 0      # a success clears the streak
                 if not is_steer:
                     last_current = _summarize(assoc, reg, record)
                 write_status(args.status_file, status_assoc, "running", last_current,
                              frontier.counts(), processed, start_ts)
                 if processed % 25 == 0:
                     log.info("Processed %d | frontier: %s", processed, frontier.counts())
+
+            except db.Blocked as e:
+                # Deliberately not mark_failed: the animal is fine, we are the
+                # problem, and burning its attempts would quietly turn a block
+                # into a frontier full of dead rows. It stays pending.
+                blocked += 1
+                wait = e.retry_after if e.retry_after is not None else min(30 * blocked, 300)
+                log.warning("Refused (%s) on %s:%s -- %d in a row", e.status, assoc, reg, blocked)
+                if blocked >= args.max_blocked:
+                    log.error(
+                        "Stopping: %d consecutive refusals from the host. This is a "
+                        "block, not a bad animal -- the frontier is untouched and "
+                        "resumes when access is sorted out.", blocked)
+                    final_state = "blocked"
+                    return EXIT_BLOCKED
+                log.info("Backing off %ds before trying again.", wait)
+                time.sleep(wait)
+                continue
 
             except db.AnimalNotFound:
                 # DigitalBeef serves HTTP 200 + the site shell for a registration
@@ -412,11 +438,12 @@ def run(args) -> None:
             writer.close()
         if loader:
             loader.backend.close()
-        write_status(args.status_file, status_assoc, "idle", last_current,
+        write_status(args.status_file, status_assoc, final_state, last_current,
                      frontier.counts(), processed, start_ts)
         log.info("Final frontier: %s", frontier.counts())
         if loader:
             log.info("Load stats:\n%s", loader.stats.report())
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -449,6 +476,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delay", type=float, default=2.0, help="Seconds between requests (be polite).")
     p.add_argument("--timeout", type=int, default=30)
     p.add_argument("--max-attempts", type=int, default=3, help="Retries before marking failed.")
+    p.add_argument("--max-blocked", type=int, default=5,
+                   help="Consecutive 403/429 refusals before stopping (default 5). A "
+                        "refusal is about the client, not the animal, so continuing "
+                        "just knocks harder; the frontier is left untouched.")
     p.add_argument("--stay-in-association", action="store_true",
                    help="Only follow relatives within --association. A pedigree cites "
                         "other registries and DigitalBeef serves ten of them, so "
@@ -485,7 +516,7 @@ def main(argv=None):
             or args.reset_skipped or args.skip_foreign):
         # No new work specified — resume whatever is already pending.
         log.info("No seeds given; resuming existing frontier in %s", args.db)
-    run(args)
+    return run(args)
 
 
 if __name__ == "__main__":
