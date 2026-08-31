@@ -41,6 +41,83 @@ ALLOWED = ("association", "state", "done", "pending", "failed", "skipped",
 # allowlist in publish.mjs, which rejects anything it does not recognise.
 CURRENT_FIELDS = ("association", "reg", "name")
 
+# The graph half of the board. dashboard_web.py's refresh loop writes
+# neo_stats.json every 8s; this reads it rather than opening its own Aura
+# connection, so the figures on the board are the same ones the local
+# dashboard shows and Aura is not queried twice for them.
+#
+# Counts only. Every value here is an aggregate over the whole graph or one
+# association -- there is no per-animal anything to leak, which is what makes
+# the graph safe to put on a public page at all.
+GRAPH_FILE = os.path.join(APP_DIR, "neo_stats.json")
+GRAPH_FIELDS = ("animals", "registrations", "multi_assoc")
+DEFECT_STATUSES = ("Free", "Carrier", "Suspect", "Unknown")
+
+
+def _load_lag() -> dict[str, int]:
+    """Records crawled into JSONL that the loader has not written yet.
+
+    Estimated from the loader's saved byte offset against the file size:
+    bytes are exact and cheap, and the average line length of the part already
+    loaded turns them into a record count that is close enough to answer "is
+    the graph a minute behind or a day behind".
+
+    This is the honest lag signal. Comparing registrations to crawled counts
+    is not -- the loader runs with --skip-steers, so the graph is legitimately
+    smaller than the crawl and always will be.
+    """
+    try:
+        with open(os.path.join(APP_DIR, "load_offsets.json"), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    offsets = data.get("offsets", data) or {}
+    counts = data.get("counts") or {}
+
+    lag = {}
+    for code, off in offsets.items():
+        try:
+            size = os.path.getsize(os.path.join(APP_DIR, f"data_{code}.jsonl"))
+        except OSError:
+            continue
+        off, loaded = int(off or 0), int(counts.get(code, 0) or 0)
+        behind_bytes = max(0, size - off)
+        if not behind_bytes:
+            lag[code] = 0
+        elif off and loaded:
+            lag[code] = int(behind_bytes / (off / loaded))
+    return lag
+
+
+def graph_state() -> dict | None:
+    """neo_stats.json projected down to publishable counts, or None if the
+    dashboard has never written one."""
+    try:
+        with open(GRAPH_FILE, encoding="utf-8") as f:
+            st = json.load(f)
+    except (OSError, ValueError) as e:
+        print(f"skip graph: {e}", file=sys.stderr)
+        return None
+
+    graph = {"ok": bool(st.get("ok")), "read_at": st.get("read_at")}
+    for k in GRAPH_FIELDS:
+        graph[k] = int(st.get(k) or 0)
+
+    defects = st.get("defects") or {}
+    graph["defects"] = {k: int(defects.get(k) or 0) for k in DEFECT_STATUSES
+                        if defects.get(k)}
+
+    lag = _load_lag()
+    by = {}
+    for code, n in (st.get("by_assoc") or {}).items():
+        by[str(code)] = {"registrations": int(n or 0), "behind": int(lag.get(code, 0))}
+    graph["by_association"] = by
+
+    # st["note"] is the driver's own error text, which can name the Aura host.
+    # `ok: false` is enough for a public board to say "the graph is not being
+    # read"; why it is not being read is a question for the box.
+    return graph
+
 
 def project(path: str) -> dict | None:
     """One status file down to publishable numbers, or None to skip it."""
@@ -94,6 +171,7 @@ def main() -> int:
     payload = {
         "source": args.source,
         "boards": boards,
+        "graph": graph_state(),
         "disk": {"used_gb": round(usage.used / 1e9, 1),
                  "free_gb": round(usage.free / 1e9, 1)},
     }
@@ -126,8 +204,10 @@ def main() -> int:
         print(f"publish rejected {r.status_code}: {r.text[:300]}", file=sys.stderr)
         return 1
 
+    g = payload["graph"]
     print(f"published {len(boards)} board(s): "
-          + ", ".join(f"{b['association']}={b['done']}" for b in boards))
+          + ", ".join(f"{b['association']}={b['done']}" for b in boards)
+          + (f"; graph animals={g['animals']}" if g and g["ok"] else "; graph unread"))
     return 0
 
 

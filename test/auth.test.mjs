@@ -104,6 +104,50 @@ test('publish rejects a current animal carrying more than identity', async () =>
   assert.match((await res.json()).error, /current carries unexpected fields: dob, sex, defects/);
 });
 
+test('publish rejects a graph block that is not counts', async () => {
+  process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
+  const publish = await load('publish.mjs');
+  const auth = { authorization: 'Bearer ingest-secret' };
+  const send = (graph) => publish(post({ source: 'lightsail', boards: [], graph }, auth));
+
+  // The graph figures are aggregates. Anything shaped like a record, or the
+  // driver's error text (which names the Aura host), must not ride along.
+  const cases = [
+    [{ animals: 1, sample_animal: 'TLF MS TANDY 1CA' }, /unexpected fields: sample_animal/],
+    [{ note: 'Unable to connect to abc123.databases.neo4j.io' }, /unexpected fields: note/],
+    [{ animals: 'lots' }, /graph.animals must be a number/],
+    [{ defects: { Carrier: 3, Reg: 'MA430053' } }, /unexpected status: Reg/],
+    [{ by_association: { CHIA: { registrations: 5, owner: 'someone' } } },
+     /by_association.CHIA carries unexpected fields: owner/],
+    [{ by_association: { CHIA: { behind: 'some' } } }, /by_association.CHIA.behind must be a number/],
+    [{ by_association: { '../escape': { behind: 1 } } }, /bad association code/],
+    [['not', 'an', 'object'], /graph must be an object/],
+  ];
+
+  for (const [graph, expected] of cases) {
+    const res = await send(graph);
+    assert.equal(res.status, 400, `${JSON.stringify(graph)} should be rejected`);
+    assert.match((await res.json()).error, expected);
+  }
+});
+
+test('publish accepts a well-formed graph block', async () => {
+  process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
+  const publish = await load('publish.mjs');
+  // Reaches the blob store, which throws without a Netlify context -- proof
+  // the payload cleared validation rather than being turned away.
+  await assert.rejects(() => publish(post({
+    source: 'lightsail',
+    boards: [{ association: 'CHIA', done: 1 }],
+    graph: {
+      ok: true, read_at: '2026-08-31T12:00:00Z', animals: 268112,
+      registrations: 300503, multi_assoc: 4120,
+      defects: { Free: 18422, Carrier: 611 },
+      by_association: { CHIA: { registrations: 101940, behind: 2800 } },
+    },
+  }, { authorization: 'Bearer ingest-secret' })));
+});
+
 test('publish rejects a current that is not an object', async () => {
   process.env.CATTLE_INGEST_TOKEN = 'ingest-secret';
   const publish = await load('publish.mjs');
