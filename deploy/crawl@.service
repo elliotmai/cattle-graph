@@ -53,6 +53,13 @@ ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/crawl.py \
 Restart=always
 RestartSec=60
 
+# ...and a host that is refusing us outright should end the loop, not feed it.
+# crawl.py exits 75 after --max-blocked consecutive 403/429s; without this,
+# Restart=always would put the crawler back into the same wall every minute,
+# knocking faster than a working crawl because a refusal costs one request
+# where a successful animal costs four. Clear the block, then start the unit.
+RestartPreventExitStatus=75
+
 # Politeness is the point; never let a crawler starve the box.
 Nice=5
 
