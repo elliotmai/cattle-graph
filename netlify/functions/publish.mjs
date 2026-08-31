@@ -78,6 +78,15 @@ export default async (request) => {
     }
   }
 
+  // The graph half of the board: aggregate counts out of Neo4j, published by
+  // the same timer. Checked the same way as boards -- an allowlist of keys
+  // that must all be numbers, so a future change on the box cannot quietly
+  // start posting animal-level data to a public page.
+  if (body.graph !== undefined && body.graph !== null) {
+    const bad = checkGraph(body.graph);
+    if (bad) return json({ error: bad }, 400);
+  }
+
   // A crawler that has just restarted reports nothing for a moment. Letting
   // that overwrite a good board is how a dashboard erases itself: nothing
   // errors, the numbers simply vanish.
@@ -95,6 +104,7 @@ export default async (request) => {
   const entry = {
     source,
     boards: body.boards,
+    graph: body.graph ?? null,
     disk: body.disk ?? null,
     publishedAt: new Date().toISOString(),
   };
@@ -102,6 +112,56 @@ export default async (request) => {
 
   return json({ ok: true, source, boards: entry.boards.length });
 };
+
+/**
+ * Validate the graph block, returning an error string or null.
+ *
+ * Counts only, by construction: every leaf must be a finite number, so a name,
+ * a registration or an error string carrying the Aura host cannot ride along
+ * inside it even by accident.
+ */
+function checkGraph(graph) {
+  if (typeof graph !== 'object' || Array.isArray(graph)) return 'graph must be an object';
+
+  const allowed = new Set([
+    'ok', 'read_at', 'animals', 'registrations', 'multi_assoc',
+    'defects', 'by_association',
+  ]);
+  const extra = Object.keys(graph).filter((k) => !allowed.has(k));
+  if (extra.length) return `graph carries unexpected fields: ${extra.join(', ')}`;
+
+  for (const k of ['animals', 'registrations', 'multi_assoc']) {
+    if (graph[k] !== undefined && !Number.isFinite(graph[k])) {
+      return `graph.${k} must be a number`;
+    }
+  }
+
+  // The four statuses norm_defect_status() collapses every raw test result to.
+  const statuses = new Set(['Free', 'Carrier', 'Suspect', 'Unknown']);
+  for (const [k, v] of Object.entries(graph.defects ?? {})) {
+    if (!statuses.has(k)) return `graph.defects carries unexpected status: ${k}`;
+    if (!Number.isFinite(v)) return `graph.defects.${k} must be a number`;
+  }
+
+  for (const [code, v] of Object.entries(graph.by_association ?? {})) {
+    if (!/^[a-z0-9_-]{1,40}$/i.test(code)) {
+      return `graph.by_association has a bad association code: ${code}`;
+    }
+    if (!v || typeof v !== 'object' || Array.isArray(v)) {
+      return `graph.by_association.${code} must be an object`;
+    }
+    const extraCode = Object.keys(v).filter((x) => !['registrations', 'behind'].includes(x));
+    if (extraCode.length) {
+      return `graph.by_association.${code} carries unexpected fields: ${extraCode.join(', ')}`;
+    }
+    for (const x of ['registrations', 'behind']) {
+      if (v[x] !== undefined && !Number.isFinite(v[x])) {
+        return `graph.by_association.${code}.${x} must be a number`;
+      }
+    }
+  }
+  return null;
+}
 
 /** Constant-time compare, so the token cannot be guessed a byte at a time. */
 function authorized(header, expected) {

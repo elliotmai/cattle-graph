@@ -86,6 +86,7 @@ auto_load = {"on": True}                 # incremental auto-load every 60s
 load_offsets: dict = {}                  # per-file byte offset already loaded
 load_counts: dict = {}                   # per-file records already written to Neo4j
 OFFSETS_FILE = None                      # set in main()
+NEO_SNAPSHOT = None                      # set in main()
 _line_cache: dict = {}                   # path -> ((mtime,size), line_count)
 load_state = {"running": False, "current": "", "index": 0, "total": 0, "done_msg": ""}
 ops_state = {"running": False, "label": "", "result": ""}
@@ -383,6 +384,31 @@ NEO_QUERIES = {
 }
 
 
+def write_neo_snapshot():
+    """Publish neo_stats to disk so another process can read it.
+
+    publish_status.py runs from a timer, not inside this process, and the
+    Netlify board has no route to Aura -- so the graph figures have to reach
+    it through a file. Written atomically because that reader polls every 30s
+    and a half-written file would show up there as a missing graph.
+
+    The file's own age is the useful part: this loop is in the same process as
+    auto_load_loop, so a snapshot that has stopped advancing means loading has
+    stopped too, which is the one failure the crawl counts cannot show.
+    """
+    if not NEO_SNAPSHOT:
+        return
+    payload = dict(neo_stats)
+    payload["read_at"] = datetime.now(timezone.utc).isoformat()
+    tmp = NEO_SNAPSHOT + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        os.replace(tmp, NEO_SNAPSHOT)
+    except OSError:
+        pass
+
+
 def neo_refresh_loop():
     while True:
         uri, user, pw = neo4j_env()
@@ -417,6 +443,9 @@ def neo_refresh_loop():
         else:
             neo_stats["ok"] = False
             neo_stats["note"] = "connect NEO4J_* env vars before launching"
+        # Both paths: a snapshot saying the graph is unreachable is worth
+        # publishing, and is not the same thing as no snapshot at all.
+        write_neo_snapshot()
         time.sleep(8)
 
 
@@ -970,8 +999,9 @@ tick(); setInterval(tick,1500);
 
 
 def main():
-    global OFFSETS_FILE
+    global OFFSETS_FILE, NEO_SNAPSHOT
     OFFSETS_FILE = os.path.join(HERE, "load_offsets.json")
+    NEO_SNAPSHOT = os.path.join(HERE, "neo_stats.json")
     _load_offsets()
     load_neo4j_creds_file()
     print(f"Neo4j target: {os.environ.get('NEO4J_URI', '<none — set NEO4J_* or drop a creds file>')}")

@@ -1,10 +1,9 @@
 import { getStore } from '@netlify/blobs';
-import { timingSafeEqual } from 'node:crypto';
 
 /**
  * netlify.toml [[headers]] apply to static assets, not to what a function
- * returns. A probe of the deployed 401 came back with neither X-Robots-Tag
- * nor X-Frame-Options, so the board sets them itself.
+ * returns. A probe of the deployed function came back with neither
+ * X-Robots-Tag nor X-Frame-Options, so the board sets them itself.
  */
 const SECURITY = {
   'x-content-type-options': 'nosniff',
@@ -15,7 +14,12 @@ const SECURITY = {
 };
 
 /**
- * The public status board. Read-only on purpose.
+ * The public status board. Read-only on purpose, and open: it carries counts,
+ * rates and the registration of the animal being read, none of which is worth
+ * a password. The gate is on what is published, not on who may look --
+ * publish_status.py projects each status file down to an allowlist and
+ * publish.mjs rejects anything outside it, so nothing reaches this page that
+ * a stranger should not see.
  *
  * dashboard_web.py on the crawl box also exposes /api/load, /api/schema,
  * /api/reconcile and /api/autoload, which start subprocesses. None of that
@@ -24,28 +28,6 @@ const SECURITY = {
  * from a phone: how far along the crawl is, and whether it is still moving.
  */
 export default async (request) => {
-  const expected = process.env.CATTLE_VIEW_PASSWORD;
-  if (!expected) {
-    // Same refusal as the ingest endpoint. A missing password must not mean
-    // "no password required" -- that is how a private board goes public
-    // without anyone noticing.
-    return new Response('CATTLE_VIEW_PASSWORD is not set on this site', {
-      status: 503,
-      headers: SECURITY,
-    });
-  }
-  if (!authorized(request.headers.get('authorization'), expected)) {
-    // Basic auth: the browser draws the login box, so there is no login page
-    // to build and no session cookie to get wrong.
-    return new Response('Authentication required', {
-      status: 401,
-      headers: {
-        ...SECURITY,
-        'www-authenticate': 'Basic realm="cattle-graph", charset="UTF-8"',
-      },
-    });
-  }
-
   const store = getStore('cattle-graph');
   const { blobs } = await store.list({ prefix: 'status/' });
   const entries = (await Promise.all(
@@ -74,9 +56,16 @@ export function summarize(entries) {
   const now = Date.now();
   const byAssoc = new Map();
   let publishedAt = null;
+  let graph = null, graphFrom = null;
 
   for (const e of entries) {
     if (!publishedAt || e.publishedAt > publishedAt) publishedAt = e.publishedAt;
+    // Newest graph reading wins, independently of which publisher sent it --
+    // only the box running the loader has one at all.
+    if (e.graph && (!graphFrom || e.publishedAt > graphFrom)) {
+      graph = e.graph;
+      graphFrom = e.publishedAt;
+    }
     for (const b of e.boards ?? []) {
       const prev = byAssoc.get(b.association);
       if (!prev || (b.updated_at ?? '') > (prev.updated_at ?? '')) {
@@ -85,13 +74,20 @@ export function summarize(entries) {
     }
   }
 
+  const inGraph = graph?.by_association ?? {};
+
   const boards = [...byAssoc.values()].map((b) => {
     const ageSec = b.updated_at ? Math.round((now - Date.parse(b.updated_at)) / 1000) : null;
     const rate = Number(b.rate_per_min) || 0;
     const pending = Number(b.pending) || 0;
+    const g = inGraph[b.association];
     return {
       ...b,
       ageSec,
+      // What is actually in Neo4j for this association, and how many crawled
+      // records are still waiting to get there.
+      graphed: g ? Number(g.registrations) || 0 : null,
+      behind: g ? Number(g.behind) || 0 : null,
       // A crawler writes its status file on every animal, so ~17s at 3.5/min.
       // Five minutes of silence means it is gone, not slow.
       stale: ageSec === null || ageSec > 300,
@@ -106,6 +102,15 @@ export function summarize(entries) {
   }), { done: 0, pending: 0, failed: 0 });
 
   const publishAgeSec = publishedAt ? Math.round((now - Date.parse(publishedAt)) / 1000) : null;
+
+  // The graph reading comes from a loop inside the same process as the loader,
+  // so a reading that has stopped advancing means loading has stopped -- the
+  // one failure the crawl counts cannot show, because the crawlers keep
+  // filling JSONL whether or not anything is reading it.
+  const graphAgeSec = graph?.read_at
+    ? Math.round((now - Date.parse(graph.read_at)) / 1000) : null;
+  const loading = Boolean(graph?.ok) && graphAgeSec !== null && graphAgeSec < 300;
+  const behindTotal = boards.reduce((t, b) => t + (Number(b.behind) || 0), 0);
 
   // When the whole crawl finishes is the LONGEST leg, not the sum: the three
   // crawlers run at once against separate registries, so MAINE finishing in
@@ -123,6 +128,10 @@ export function summarize(entries) {
     // The box publishes every 60s; five minutes of silence means the box
     // itself is the problem, not any one crawler.
     reporting: publishAgeSec !== null && publishAgeSec < 300,
+    graph,
+    graphAgeSec,
+    loading,
+    behindTotal,
     disk: entries.find((e) => e.disk)?.disk ?? null,
   };
 }
@@ -147,6 +156,26 @@ const dur = (days) => {
   return `${(days / 30.44).toFixed(1)} mo`;
 };
 
+/**
+ * Why nothing is being written, in the words that name the thing to go and
+ * look at. All three mean the same to a reader -- the graph is not moving --
+ * and completely different things to whoever has to fix it.
+ */
+function loadWarning(s) {
+  if (!s.graph) return 'No graph reading has ever been published.';
+  if (!s.graph.ok) return 'Neo4j is not answering the crawl box.';
+  return `The graph was last read ${ago(s.graphAgeSec)}, so the loader has stopped.`;
+}
+
+/** Genetic-test tallies across the whole graph, carriers called out. */
+function defectRow(defects) {
+  const entries = Object.entries(defects ?? {}).filter(([, n]) => Number(n) > 0);
+  if (!entries.length) return '';
+  return `<ul class="defects">${entries.map(([status, n]) =>
+    `<li class="${status === 'Carrier' ? 'carrier' : ''}">${esc(status)}<b>${num(n)}</b></li>`,
+  ).join('')}</ul>`;
+}
+
 export function renderHtml(s) {
   const pctTotal = s.totals.done + s.totals.pending > 0
     ? (s.totals.done / (s.totals.done + s.totals.pending) * 100) : 0;
@@ -169,6 +198,8 @@ export function renderHtml(s) {
         <div><dt>Rate</dt><dd>${esc(b.rate_per_min ?? 0)}<span class="unit">/min</span></dd></div>
         <div><dt>Finishes</dt><dd>${b.etaDays !== null
           ? `${b.etaDays}<span class="unit">d</span>` : '&mdash;'}</dd></div>
+        ${b.graphed !== null ? `<div><dt>In graph</dt><dd>${num(b.graphed)}</dd></div>` : ''}
+        ${b.behind ? `<div><dt>To load</dt><dd class="warn">${num(b.behind)}</dd></div>` : ''}
         ${Number(b.failed) ? `<div><dt>Failed</dt><dd class="warn">${num(b.failed)}</dd></div>` : ''}
       </dl>
 
@@ -349,6 +380,37 @@ export function renderHtml(s) {
     color:var(--dim); font-size:.72rem; letter-spacing:.04em;
   }
 
+  /* ---------- section labels ---------- */
+  /* Two sources of truth on one page -- what has been crawled, and what is
+     actually in Neo4j. They are different numbers and get confused if the
+     page does not say plainly which is which. */
+  .sect{
+    display:flex; align-items:baseline; justify-content:space-between; gap:.75rem;
+    margin:2rem 0 .85rem; padding-bottom:.4rem; border-bottom:1px solid var(--rule);
+  }
+  .sect h2{
+    font-family:Bitter,Georgia,serif; font-weight:700; font-size:.82rem;
+    letter-spacing:.16em; text-transform:uppercase; margin:0;
+  }
+  .sect .when{color:var(--dim); font-size:.7rem; letter-spacing:.04em; white-space:nowrap}
+  .sect:first-of-type{margin-top:0}
+
+  /* ---------- defect tallies ---------- */
+  .defects{
+    display:flex; flex-wrap:wrap; gap:.4rem .5rem; margin:.9rem 0 0;
+    padding:0; list-style:none;
+  }
+  .defects li{
+    border:1px solid var(--rule); border-radius:1rem; padding:.25rem .65rem;
+    font-size:.72rem; color:var(--dim); white-space:nowrap;
+  }
+  .defects b{
+    color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums;
+    margin-left:.3em;
+  }
+  .defects li.carrier{border-color:var(--barn); color:var(--barn)}
+  .defects li.carrier b{color:var(--barn)}
+
   .foot{
     margin:1.75rem 0 0; text-align:center; color:var(--dim);
     font-size:.72rem; line-height:1.6;
@@ -374,8 +436,15 @@ export function renderHtml(s) {
   ${s.reporting ? '' : `<p class="banner">The crawl box last reported ${esc(ago(s.publishAgeSec))}.
      These numbers are not live &mdash; check the instance.</p>`}
 
+  ${s.reporting && !s.loading ? `<p class="banner">${esc(loadWarning(s))}
+     The crawlers keep filling their files either way, so the counts below
+     still rise &mdash; but nothing is reaching Neo4j.</p>` : ''}
+
+  <div class="sect"><h2>The crawl</h2>
+    <span class="when">read ${esc(ago(s.publishAgeSec))}</span></div>
+
   <dl class="totals">
-    <div><dt>Animals</dt><dd>${num(s.totals.done)}</dd></div>
+    <div><dt>Recorded</dt><dd>${num(s.totals.done)}</dd></div>
     <div><dt>Remaining</dt><dd>${num(s.totals.pending)}</dd></div>
     <div><dt>Complete</dt><dd>${pctTotal.toFixed(1)}%</dd></div>
     <div class="eta"><dt>Time left</dt><dd>${dur(s.etaDaysOverall)}</dd></div>
@@ -385,7 +454,22 @@ export function renderHtml(s) {
 
   <div class="grid">${cards || '<p class="foot">Nothing published yet.</p>'}</div>
 
+  <div class="sect"><h2>The graph</h2>
+    <span class="when">${s.graph ? `read ${esc(ago(s.graphAgeSec))}` : 'never read'}</span></div>
+
+  ${s.graph ? `<dl class="totals">
+    <div><dt>Animals</dt><dd>${num(s.graph.animals)}</dd></div>
+    <div><dt>Registrations</dt><dd>${num(s.graph.registrations)}</dd></div>
+    <div><dt>In two registries</dt><dd>${num(s.graph.multi_assoc)}</dd></div>
+    <div${s.behindTotal ? ' class="eta"' : ''}><dt>Waiting to load</dt>
+      <dd>${s.behindTotal ? num(s.behindTotal) : 'none'}</dd></div>
+  </dl>
+  ${defectRow(s.graph.defects)}` : `<p class="foot">The box has not published a
+     graph reading. That is cattle-dashboard's job &mdash; check it is running.</p>`}
+
   <p class="foot">Published ${esc(ago(s.publishAgeSec))}<br>
+     Animals are deduplicated across registries, so the graph holds fewer of
+     them than there are registrations<br>
      Controls stay on the crawl box, reachable over SSH only</p>
 </main>
 <script>
@@ -409,9 +493,6 @@ export function renderHtml(s) {
         cache: 'no-store',
         headers: { 'x-live-refresh': '1' },
       });
-      // 401 means the browser dropped the cached basic-auth credential.
-      // Reloading lets it prompt again instead of silently freezing.
-      if (res.status === 401) { location.reload(); return; }
       if (!res.ok) throw new Error(res.status);
       var doc = new DOMParser().parseFromString(await res.text(), 'text/html');
       var fresh = doc.querySelector('main');
@@ -432,21 +513,6 @@ export function renderHtml(s) {
   start();
 })();
 </script>`;
-}
-
-function authorized(header, expected) {
-  const raw = String(header ?? '');
-  if (!/^Basic\s+/i.test(raw)) return false;
-  let decoded;
-  try {
-    decoded = Buffer.from(raw.replace(/^Basic\s+/i, ''), 'base64').toString('utf8');
-  } catch { return false; }
-  // Any username; the password is the secret. Constant-time so it cannot be
-  // guessed a byte at a time.
-  const given = decoded.slice(decoded.indexOf(':') + 1);
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export const config = { path: ['/', '/summary.json'] };
