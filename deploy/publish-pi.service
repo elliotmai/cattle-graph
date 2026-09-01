@@ -1,0 +1,32 @@
+# Publish the Pi's crawl status to the Netlify board, as its own source.
+#
+# The board (netlify/functions) keeps one blob per source and merges boards by
+# association, newest updated_at winning (dashboard.mjs). So publishing here as
+# --source pi makes the Pi's LIVE CHIA card override the stale one still coming
+# from the Lightsail box (which stopped crawling CHIA), while Lightsail keeps
+# owning the associations it still crawls and the graph (Neo4j) figures -- the
+# Pi has no neo_stats.json, so it publishes no graph block and never blanks
+# Lightsail's.
+#
+# Reuses CATTLE_ENDPOINT and CATTLE_INGEST_TOKEN from /etc/cattle-graph.env --
+# the same /api/publish URL and shared token the Lightsail publisher uses.
+# pi-setup.md fills in __CRAWL_USER__.
+
+[Unit]
+Description=cattle-graph: publish Pi crawl status to the board
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__CRAWL_USER__
+Group=__CRAWL_USER__
+WorkingDirectory=/opt/cattle-graph
+EnvironmentFile=/etc/cattle-graph.env
+ExecStart=/opt/cattle-graph/.venv/bin/python /opt/cattle-graph/deploy/publish_status.py --source pi
+
+# Read-only helper: it only reads status_*.json and POSTs counts out.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes

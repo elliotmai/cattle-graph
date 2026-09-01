@@ -147,6 +147,12 @@ CRAWL_UA=cattle-graph crawler (you@example.com)
 #NEO4J_URI=neo4j+s://xxxxxxxx.databases.neo4j.io
 #NEO4J_USER=neo4j
 #NEO4J_PASSWORD=your-aura-password
+
+# Optional: to show the Pi's crawl on the Netlify board (step 10), set the same
+# endpoint URL and shared token the Lightsail publisher uses (copy the token
+# from Lightsail's /etc/cattle-graph.env).
+#CATTLE_ENDPOINT=https://your-site.netlify.app/api/publish
+#CATTLE_INGEST_TOKEN=the-shared-ingest-token
 EOF
 sudo chmod 600 /etc/cattle-graph.env
 ```
@@ -255,6 +261,38 @@ sudo systemctl enable --now crawl-pi@MAINE crawl-pi@SHORT
 Leave **ANGUS** off: angus.org serves a JS challenge a plain HTTP client can't
 clear (noted in `angus.py` and the Lightsail README), so its frontier stays
 empty and the service would restart-loop.
+
+## 10. Show the Pi on the dashboard (optional)
+
+Once the crawl moves to the Pi, the Lightsail box keeps publishing its now-frozen
+CHIA card, so the board reads **stalled** even though the Pi is crawling fine.
+Fix it by having the Pi publish its own status. The board keeps one blob per
+`source` and merges boards by association with the **newest `updated_at`
+winning** (`netlify/functions`), so the Pi's live CHIA overrides Lightsail's
+stale one automatically — while Lightsail keeps owning its other associations
+and the graph (Neo4j) figures.
+
+1. Set `CATTLE_ENDPOINT` and `CATTLE_INGEST_TOKEN` in `/etc/cattle-graph.env`
+   (step 6) — the same `/api/publish` URL and shared token Lightsail uses (copy
+   the token from Lightsail's `/etc/cattle-graph.env`).
+2. Confirm what would be sent, without sending it:
+   ```bash
+   cd /opt/cattle-graph && .venv/bin/python deploy/publish_status.py --source pi --dry-run
+   ```
+3. Install and enable the timer (publishes every 60s, `--source pi`):
+   ```bash
+   cd /opt/cattle-graph
+   for u in publish-pi.service publish-pi.timer; do
+     sed "s/__CRAWL_USER__/$(id -un)/g" deploy/$u | sudo tee /etc/systemd/system/$u >/dev/null
+   done
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now publish-pi.timer
+   systemctl list-timers publish-pi.timer --no-pager
+   ```
+
+The Pi has no `neo_stats.json`, so it publishes no graph block and never blanks
+the graph numbers Lightsail sends. The board's CHIA card should switch to the
+Pi's live counts within a minute.
 
 ---
 

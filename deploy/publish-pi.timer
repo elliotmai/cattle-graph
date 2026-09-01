@@ -1,0 +1,14 @@
+# Fire publish-pi.service every 60s (matching the Lightsail publisher cadence),
+# so the board's CHIA card tracks the Pi's live status and never reads as stale
+# while the crawl is running. enable --now this timer, not the service.
+
+[Unit]
+Description=cattle-graph: publish Pi status every minute
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
