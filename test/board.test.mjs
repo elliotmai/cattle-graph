@@ -27,7 +27,7 @@ const entry = (over = {}) => ({
 
 test('graph counts are joined onto the association they belong to', () => {
   const s = summarize([entry()]);
-  assert.equal(s.boards[0].graphed, 999999); // TEMPORARY: deliberate break to prove CI goes red
+  assert.equal(s.boards[0].graphed, 101940);
   assert.equal(s.boards[0].behind, 2800);
   assert.equal(s.behindTotal, 2800);
   assert.equal(s.loading, true);
