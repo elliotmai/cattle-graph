@@ -13,8 +13,11 @@
 #   - User/Group is your Pi login, not `ubuntu` (pi-setup.md fills it in).
 #   - ExecStart calls deploy/crawl-run.sh, which builds the crawl.py command and
 #     turns on live loading into Aura ONLY when NEO4J_URI is set in the env file.
-#     Leave it unset to write data_%i.jsonl only and load elsewhere; set it to
-#     load each record into Neo4j as it is fetched. See deploy/pi-setup.md.
+#     Leave NEO4J_URI UNSET on a home Pi (the recommended setup): the crawl
+#     writes data_%i.jsonl, deploy/pi-ship.sh rsyncs it to a datacenter loader
+#     box, and the loader runs there where Aura is milliseconds away. Live-load
+#     over a residential line is chatty and painfully slow -- see
+#     deploy/pi-setup.md step 8.
 #
 # Flag choices (in crawl-run.sh) are kept identical to crawl@.service so the Pi
 # produces records the dedup loader merges cleanly with what the other crawlers
