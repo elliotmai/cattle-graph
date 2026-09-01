@@ -67,6 +67,23 @@ test('the newest graph reading wins when two boxes publish', () => {
   assert.equal(s.graph.animals, 268112);
 });
 
+test('a breed both boxes report appears once, at the newer box\'s count', () => {
+  // The laptop's crawl of CHIA is long finished and its frontier is a fraction
+  // of the box's. Counting both would double the card; taking the wrong one
+  // would halve it.
+  const laptop = entry({
+    source: 'laptop',
+    publishedAt: ago(600),
+    boards: [{ association: 'CHIA', state: 'idle', done: 20000, pending: 0,
+               rate_per_min: 0, pct: 100, updated_at: ago(90000) }],
+  });
+  const s = summarize([laptop, entry()]);
+  assert.equal(s.boards.length, 1);
+  assert.equal(s.boards[0].done, 103876);
+  assert.equal(s.boards[0].source, 'lightsail');
+  assert.equal(s.totals.done, 103876, 'one breed, counted once');
+});
+
 const history = (n = 40, stepSec = 600) => ({
   points: Array.from({ length: n }, (_, i) => {
     const t = Math.floor(Date.now() / 1000) - (n - 1 - i) * stepSec;

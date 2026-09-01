@@ -133,6 +133,14 @@ split in two, which is the arrangement muster already uses:
 The box pushes; nothing polls it. `publish_status.py` runs every 60s from
 `cattle-publish.timer` and POSTs to `/api/publish`.
 
+More than one box may publish — `--source` names each one, and they write
+separate blobs. Where two report the same breed (the laptop's old frontier and
+Lightsail's, say) the newer `updated_at` wins, on the cards and in the trend
+charts alike. Both used to resolve it differently, and a breed on both boxes
+drew a sawtooth between their two counts on a number that only ever climbs. If
+a box has finished with a breed, stop its publisher rather than leaving it to
+report a frozen count for ever.
+
 ### Both halves on one page
 
 The board shows two sets of numbers, labelled **The crawl** and **The graph**,

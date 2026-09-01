@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import { timingSafeEqual } from 'node:crypto';
-import { appendPoint } from '../lib/history.mjs';
+import { appendPoint, isDue, mergeBoards } from '../lib/history.mjs';
 
 /**
  * Where the crawl box sends its progress.
@@ -118,12 +118,16 @@ export default async (request) => {
   let recorded = false;
   try {
     const prev = await store.get('history', { type: 'json' }).catch(() => null);
-    const { points, changed } = appendPoint(prev, body.boards, Date.now());
     // 30s publishes against a 10-minute resolution: usually there is nothing
-    // to record and nothing to write.
-    if (changed) {
-      await store.setJSON('history', { points });
-      recorded = true;
+    // to record, and asking first is what keeps the reads below off the other
+    // nineteen calls.
+    if (isDue(prev, Date.now())) {
+      const boards = mergeBoards(await everySource(store, entry));
+      const { points, changed } = appendPoint(prev, boards, Date.now());
+      if (changed) {
+        await store.setJSON('history', { points });
+        recorded = true;
+      }
     }
   } catch {
     // Deliberately swallowed; the publish itself already succeeded.
@@ -131,6 +135,34 @@ export default async (request) => {
 
   return json({ ok: true, source, boards: entry.boards.length, recorded });
 };
+
+/**
+ * Every publisher's latest boards, this request's included.
+ *
+ * The history is one blob shared by every publisher, so a point has to describe
+ * the whole crawl -- not the slice belonging to whichever box happened to POST
+ * first after the ten-minute boundary. Recording just `body.boards` meant that
+ * with two boxes up (the arrangement this endpoint exists to allow) the winner
+ * of that race alternated, and a breed both of them report wrote alternating
+ * counts into one series: a card whose number was right and whose line beside
+ * it was a sawtooth between two boxes' frontiers.
+ *
+ * `entry` is merged in directly rather than read back, so a listing that has
+ * not yet caught up with the write above cannot drop this box's own reading.
+ */
+async function everySource(store, entry) {
+  // A listing that fails costs the other boxes' readings, not the point: one
+  // box's progress recorded is better than a gap in the series.
+  const { blobs } = await store.list({ prefix: 'status/' }).catch(() => ({ blobs: [] }));
+  const others = await Promise.all(
+    blobs
+      .filter(({ key }) => key !== `status/${entry.source}`)
+      .map(({ key }) => store.get(key, { type: 'json' }).catch(() => null)),
+  );
+  // `entry` last so that if two boxes somehow stamp the same updated_at, the
+  // one that just published is the one kept.
+  return [...others.filter(Boolean), entry];
+}
 
 /**
  * Validate the graph block, returning an error string or null.
