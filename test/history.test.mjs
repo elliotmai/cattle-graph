@@ -5,7 +5,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendPoint, compact, toSeries, MAX_POINTS } from '../netlify/lib/history.mjs';
+import { appendPoint, compact, isDue, mergeBoards, toSeries, MAX_POINTS }
+  from '../netlify/lib/history.mjs';
 
 const boards = (done, pending) => [
   { association: 'CHIA', done, pending },
@@ -100,14 +101,81 @@ test('series come out per association plus a summed overall', () => {
 
 test('an association absent from a point is skipped, not counted as zero', () => {
   // MAINE restarting must not read as "MAINE dropped to nothing" in its own
-  // series, nor drag the overall down for that instant.
+  // series, nor drag the overall down for that instant. Summing only what a
+  // point holds did exactly that: 180 -> 110 is a cliff the crawl never took.
   const t = 1756_000_000;
   const s = toSeries({ points: [
     { t, b: { CHIA: [100, 50], MAINE: [80, 70] } },
     { t: t + 600, b: { CHIA: [110, 40] } },
   ] });
   assert.equal(s.MAINE.length, 1, 'MAINE has one reading, not a zero second one');
-  assert.deepEqual(s.overall.map((p) => p.done), [180, 110]);
+  assert.deepEqual(s.overall.map((p) => p.done), [180, 190],
+    'MAINE keeps its last real reading in the total rather than vanishing');
+  assert.deepEqual(s.overall.map((p) => p.pending), [120, 110]);
+});
+
+test('two boxes reporting one breed do not saw between their counts', () => {
+  // The history is one blob shared by every publisher, so whichever box POSTs
+  // first after the ten-minute boundary used to write the whole point. With a
+  // breed both boxes report, that alternated between two frontiers and drew a
+  // sawtooth on a count that only ever climbs. Merging first is what fixes it.
+  const t0 = Date.parse('2026-08-31T12:00:00Z');
+  const lightsail = (done, at) => ({
+    source: 'lightsail',
+    boards: [{ association: 'CHIA', done, pending: 41000, updated_at: at }],
+  });
+  const windows = (done, at) => ({
+    source: 'windows',
+    boards: [{ association: 'CHIA', done, pending: 900, updated_at: at }],
+  });
+
+  let history = null;
+  const seen = [];
+  for (let i = 0; i < 4; i++) {
+    const at = new Date(t0 + i * 11 * 60e3).toISOString();
+    // The laptop's crawl is long dead: its reading never moves and its
+    // updated_at never advances, so it must never win.
+    const entries = i % 2
+      ? [windows(20000, '2026-08-20T09:00:00Z'), lightsail(128900 + i, at)]
+      : [lightsail(128900 + i, at), windows(20000, '2026-08-20T09:00:00Z')];
+    history = appendPoint(history, mergeBoards(entries), t0 + i * 11 * 60e3);
+    seen.push(history.points[history.points.length - 1].b.CHIA[0]);
+  }
+  assert.deepEqual(seen, [128900, 128901, 128902, 128903]);
+});
+
+test('the newest reading wins whichever box lists it, and whichever order', () => {
+  const boards = (done, at) => [{ association: 'CHIA', done, updated_at: at }];
+  const stale = { source: 'windows', boards: boards(20000, '2026-08-20T09:00:00Z') };
+  const fresh = { source: 'lightsail', boards: boards(128926, '2026-09-01T21:00:00Z') };
+
+  for (const entries of [[stale, fresh], [fresh, stale]]) {
+    const merged = mergeBoards(entries);
+    assert.equal(merged.length, 1, 'one board per association');
+    assert.equal(merged[0].done, 128926);
+    assert.equal(merged[0].source, 'lightsail', 'the winner names the box it came from');
+  }
+
+  // Two status files for one breed on a single box collapse the same way.
+  assert.deepEqual(
+    mergeBoards([{ source: 'lightsail', boards: [...boards(20000, '2026-08-20T09:00:00Z'),
+                                                 ...boards(128926, '2026-09-01T21:00:00Z')] }])
+      .map((b) => b.done),
+    [128926]);
+
+  assert.deepEqual(mergeBoards(null), []);
+  assert.deepEqual(mergeBoards([{ boards: [{ done: 1 }] }]), [], 'a board with no association');
+});
+
+test('isDue answers what appendPoint would do, without the boards', () => {
+  const t0 = Date.parse('2026-08-31T12:00:00Z');
+  assert.equal(isDue(null, t0), true, 'an empty history always wants a reading');
+
+  const one = appendPoint(null, boards(100, 50), t0);
+  assert.equal(isDue(one, t0 + 30e3), false);
+  assert.equal(appendPoint(one, boards(101, 49), t0 + 30e3).changed, false);
+  assert.equal(isDue(one, t0 + 11 * 60e3), true);
+  assert.equal(appendPoint(one, boards(140, 10), t0 + 11 * 60e3).changed, true);
 });
 
 test('a corrupt or empty blob reads as an empty history', () => {

@@ -90,9 +90,16 @@ def write_status(path, association, state, current, counts, processed, start_ts)
         "pid": os.getpid(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    # Written aside and renamed into place: publish_status.py reads this file
+    # from another process every 30s, and a read landing inside a plain
+    # truncate-and-write gets half a JSON document. That publish then drops the
+    # association entirely, which is a hole in its chart rather than an error
+    # anyone sees. os.replace is atomic on both platforms this runs on.
+    tmp = f"{path}.tmp"
     try:
-        with open(path, "w", encoding="utf-8") as f:
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f)
+        os.replace(tmp, path)
     except OSError:
         pass
 

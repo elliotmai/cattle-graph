@@ -1,5 +1,5 @@
 import { getStore } from '@netlify/blobs';
-import { toSeries } from '../lib/history.mjs';
+import { mergeBoards, toSeries } from '../lib/history.mjs';
 import { sparkline, panel, geometry } from '../lib/chart.mjs';
 
 /**
@@ -59,7 +59,6 @@ export default async (request) => {
  */
 export function summarize(entries, history = null) {
   const now = Date.now();
-  const byAssoc = new Map();
   let publishedAt = null;
   let graph = null, graphFrom = null;
 
@@ -71,18 +70,15 @@ export function summarize(entries, history = null) {
       graph = e.graph;
       graphFrom = e.publishedAt;
     }
-    for (const b of e.boards ?? []) {
-      const prev = byAssoc.get(b.association);
-      if (!prev || (b.updated_at ?? '') > (prev.updated_at ?? '')) {
-        byAssoc.set(b.association, { ...b, source: e.source });
-      }
-    }
   }
 
   const inGraph = graph?.by_association ?? {};
   const series = toSeries(history);
 
-  const boards = [...byAssoc.values()].map((b) => {
+  // Deduplicated by mergeBoards rather than here, so the page and the history
+  // resolve "two boxes reported this breed" the same way; they used to differ,
+  // and the card could disagree with the end of its own line.
+  const boards = mergeBoards(entries).map((b) => {
     const ageSec = b.updated_at ? Math.round((now - Date.parse(b.updated_at)) / 1000) : null;
     const rate = Number(b.rate_per_min) || 0;
     const pending = Number(b.pending) || 0;
