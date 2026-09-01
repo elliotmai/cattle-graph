@@ -39,6 +39,32 @@ const stepFor = (ageSec) =>
   (RESOLUTIONS.find((r) => ageSec <= r.maxAgeSec) ?? RESOLUTIONS[RESOLUTIONS.length - 1]).stepSec;
 
 /**
+ * One board per association out of any number of publishers, newest reading
+ * winning -- the same rule the board itself renders by.
+ *
+ * There is one rule rather than two on purpose. The board deduplicated by
+ * `updated_at` while the history took whichever board came last in the array,
+ * so a breed reported by two boxes could show one box's number on the card and
+ * the other box's at the end of the line right beside it.
+ *
+ * Takes publisher entries ({source, boards}) so the winner can carry the name
+ * of the box it came from.
+ */
+export function mergeBoards(entries) {
+  const byAssoc = new Map();
+  for (const e of entries ?? []) {
+    for (const b of e?.boards ?? []) {
+      if (!b?.association) continue;
+      const prev = byAssoc.get(b.association);
+      if (!prev || (b.updated_at ?? '') > (prev.updated_at ?? '')) {
+        byAssoc.set(b.association, { ...b, source: e?.source });
+      }
+    }
+  }
+  return [...byAssoc.values()];
+}
+
+/**
  * A point is {t: epoch seconds, b: {ASSOC: [done, pending]}}.
  *
  * Arrays rather than objects for the pair: this is the one structure that grows
@@ -47,11 +73,23 @@ const stepFor = (ageSec) =>
  */
 export function pointFrom(boards, nowMs) {
   const b = {};
-  for (const board of boards ?? []) {
-    if (!board?.association) continue;
+  for (const board of mergeBoards([{ boards }])) {
     b[board.association] = [Number(board.done) || 0, Number(board.pending) || 0];
   }
   return { t: Math.round(nowMs / 1000), b };
+}
+
+/**
+ * Whether a reading is due, i.e. whether appendPoint would keep one now.
+ *
+ * Separate from appendPoint so a caller can find out before doing the work of
+ * assembling the boards: gathering every publisher's view costs a blob list and
+ * a read each, and 19 of every 20 publishes have nothing to record.
+ */
+export function isDue(history, nowMs) {
+  const points = Array.isArray(history?.points) ? history.points : [];
+  const last = points[points.length - 1];
+  return !last || Math.round(nowMs / 1000) - last.t >= FINEST_STEP;
 }
 
 /**
@@ -103,10 +141,18 @@ export function compact(points, nowMs) {
 /**
  * History as plottable series: one per association plus an "overall".
  *
- * Overall is summed per point rather than from the association totals, so a
- * point recorded while one crawler was restarting cannot show up as a cliff in
- * the total -- an association missing from a point simply is not counted at that
- * instant, in either the parts or the sum.
+ * A breed's own series carries only its own readings, so a point it is missing
+ * from is a gap and draws as a straight run between the readings either side --
+ * a stall, honestly, rather than a drop to nothing.
+ *
+ * Overall carries each association's LATEST reading forward instead of summing
+ * only what a point happens to hold. Summing what is present sounds like the
+ * cautious choice and is the opposite: an association absent for one point --
+ * a crawler restarting, a status file caught mid-write -- subtracted its entire
+ * total from the line for that instant, so the overall chart spiked down by a
+ * third every time a crawler blinked. Every term in the sum is still a real
+ * reading; what carries forward is the last one taken, which is exactly what
+ * "recorded so far" means for a count that only ever grows.
  */
 export function toSeries(history) {
   const points = Array.isArray(history?.points) ? history.points : [];
@@ -119,13 +165,12 @@ export function toSeries(history) {
       .map((p) => ({ t: p.t, done: p.b[code][0], pending: p.b[code][1] }));
   }
 
+  const latest = new Map();
   series.overall = points.map((p) => {
-    const vals = Object.values(p.b ?? {});
-    return {
-      t: p.t,
-      done: vals.reduce((s, v) => s + (v[0] || 0), 0),
-      pending: vals.reduce((s, v) => s + (v[1] || 0), 0),
-    };
+    for (const [code, v] of Object.entries(p.b ?? {})) latest.set(code, v);
+    let done = 0, pending = 0;
+    for (const v of latest.values()) { done += v[0] || 0; pending += v[1] || 0; }
+    return { t: p.t, done, pending };
   }).filter((p) => p.done || p.pending);
 
   return series;
