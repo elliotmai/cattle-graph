@@ -1,0 +1,78 @@
+# The repository's own test suites, which nothing else runs.
+#
+# Netlify's checks ("Header rules", "Redirect rules", "Pages changed") report
+# on deploy configuration, not on whether the code works -- a pull request that
+# breaks every test still shows green without this.
+#
+# Two jobs rather than one so a red check names the side that broke: the
+# Netlify functions are JavaScript, the crawler and loader are Python, and a
+# change to one rarely touches the other.
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Nothing here writes to the repository; it only reads the checkout.
+permissions:
+  contents: read
+
+# A second push to a pull request makes the first run's answer stale, so drop
+# it. Runs on main are the record of what shipped and are left to finish.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  js:
+    name: js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # 22 is what deploy/lightsail-launch.sh puts on the crawl box (NodeSource
+      # node_22.x), so the tests run on the version the functions ship against.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      # ci, not install: the committed lockfile is the point of pinning.
+      - run: npm ci
+
+      - name: npm test
+        run: npm test
+
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Ubuntu 24.04 -- the Lightsail blueprint in deploy/lightsail-launch.sh --
+      # ships 3.12 as python3, and deploy/crawl@.service runs the crawler out of
+      # a venv built from it. Pin the same version here so a syntax or stdlib
+      # difference cannot pass CI and then fail on the box.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # There is no pytest and no runner config: three plain scripts, each
+      # exiting non-zero on failure. The later two are gated on !cancelled()
+      # rather than left to fail-fast because both import digitalbeef.py -- one
+      # bad change there breaks both, and seeing that takes one run, not two.
+      - name: test_dedup.py
+        run: python3 test_dedup.py
+
+      - name: test_parsers.py
+        if: '!cancelled()'
+        run: python3 test_parsers.py
+
+      - name: test_ip_pins.py
+        if: '!cancelled()'
+        run: python3 test_ip_pins.py
