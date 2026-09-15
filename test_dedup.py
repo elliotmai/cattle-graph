@@ -55,7 +55,7 @@ records = [
 for r in records:
     L.ingest(r)
 
-check(len(b.animals) == 4, f"exactly 4 animal nodes (got {len(b.animals)})")
+check(len(b.animals) == 999, f"exactly 4 animal nodes (got {len(b.animals)})")  # TEMP: block-test
 
 # JENNA: one node carrying both papers
 jenna = [uid for uid, p in b.animals.items() if norm_name(p.get("name")) == "ZNT JENNA 707T"]
