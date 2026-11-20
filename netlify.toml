@@ -19,7 +19,8 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Frame-Options = "DENY"
+    # Shown inside Hive (the household home screen), and nowhere else.
+    Content-Security-Policy = "frame-ancestors 'self' https://fridge-board-7u23.netlify.app"
     # The board is open to anyone with the URL, but it is a progress readout
     # for one crawl, not a page anyone should reach from a search for a
     # registration number. Nothing here is secret; it is simply not content.
