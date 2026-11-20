@@ -23,6 +23,10 @@
 
 const PAD = 0.08;   // headroom above/below the data, as a fraction of its range
 
+// Room for the y ticks on the left and the end label on the right. Shared by
+// panel() and geometry() so the hover layer maps x the same way the path does.
+const MARGIN = { l: 52, r: 50 };
+
 /** Nice round tick values inside [lo, hi] -- 1/2/5 x a power of ten. */
 export function ticks(lo, hi, count = 3) {
   const span = hi - lo;
@@ -99,7 +103,7 @@ export function panel(points, key, { w = 560, h = 104, label = '', xAxis = false
   if (!points || points.length < 2) return '';
   const pts = seriesOf(points, key);
   const [lo, hi] = domain(pts.map((p) => p.v));
-  const m = { t: 10, r: 40, b: xAxis ? 20 : 8, l: 46 };
+  const m = { t: 10, r: MARGIN.r, b: xAxis ? 22 : 8, l: MARGIN.l };
   const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
   const span = Math.max(1, t1 - t0);
   const xOf = (t) => m.l + ((t - t0) / span) * (w - m.l - m.r);
@@ -115,8 +119,8 @@ export function panel(points, key, { w = 560, h = 104, label = '', xAxis = false
     <text x="${m.l - 6}" y="${round(yOf(v)) + 3}" class="tick" text-anchor="end">${compact(v)}</text>`).join('');
 
   const dates = xAxis ? `
-    <text x="${m.l}" y="${h - 6}" class="tick">${day(t0)}</text>
-    <text x="${w - m.r}" y="${h - 6}" class="tick" text-anchor="end">${day(t1)}</text>` : '';
+    <text x="${m.l}" y="${h - 4}" class="tick">${day(t0)}</text>
+    <text x="${w - m.r}" y="${h - 4}" class="tick" text-anchor="end">${day(t1)}</text>` : '';
 
   return `<svg class="trend" data-key="${key}" viewBox="0 0 ${w} ${h}"
       role="img" aria-label="${label} over time, ending at ${compact(last.v)}">
@@ -137,7 +141,7 @@ export function panel(points, key, { w = 560, h = 104, label = '', xAxis = false
  * serves both and a pointer in either panel can drive both crosshairs.
  */
 export function geometry(points, { w = 560 } = {}) {
-  const m = { l: 46, r: 40 };
+  const m = MARGIN;
   return {
     w, plot: [m.l, w - m.r],
     t0: points[0].t, t1: points[points.length - 1].t,
