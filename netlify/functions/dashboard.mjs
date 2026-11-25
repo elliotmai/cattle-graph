@@ -4,12 +4,14 @@ import { sparkline, panel, geometry } from '../lib/chart.mjs';
 
 /**
  * netlify.toml [[headers]] apply to static assets, not to what a function
- * returns. A probe of the deployed function came back with neither
- * X-Robots-Tag nor X-Frame-Options, so the board sets them itself.
+ * returns, so the board sets its own. It may be shown inside Hive (the
+ * household home screen) and nowhere else: frame-ancestors, the same list as
+ * netlify.toml. (X-Frame-Options can't name another site, and DENY kept the
+ * board blank inside Hive.)
  */
 const SECURITY = {
   'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
+  'content-security-policy': "frame-ancestors 'self' https://hive.flyingdoublemranch.com https://fridge-board-7u23.netlify.app",
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-robots-tag': 'noindex, nofollow',
   'cache-control': 'no-store',
