@@ -315,6 +315,13 @@ export function renderHtml(s) {
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+  // Inside Hive's frame: no pinch or double-tap zoom (Hive can't stop a pinch that starts in here).
+  if (window.parent !== window) {
+    document.documentElement.style.touchAction = 'pan-x pan-y';
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  }
+</script>
 <meta name="color-scheme" content="light dark">
 <title>Cattle Graph</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
@@ -449,7 +456,10 @@ export function renderHtml(s) {
   .sect h2{font-family:var(--slab); font-weight:700; font-size:var(--t-lg); line-height:1.2}
   .sect .label{white-space:nowrap}
 
-  .stack{display:grid; gap:var(--s4)}
+  /* minmax(0,...) rather than auto/1fr: an auto track grows to its widest
+     unbreakable line, so one long animal name (nowrap, meant to ellipsize)
+     pushed every panel past the right edge of a phone. */
+  .stack{display:grid; gap:var(--s4); grid-template-columns:minmax(0,1fr)}
 
   /* ---------- totals ---------- */
   /* auto-fill, not auto-fit: both totals panels lay out on the same column
@@ -476,7 +486,7 @@ export function renderHtml(s) {
   .chips .is-alert, .chips .is-alert b{border-color:var(--barn); color:var(--barn)}
 
   /* ---------- cards ---------- */
-  .grid{display:grid; gap:var(--s4); grid-template-columns:1fr}
+  .grid{display:grid; gap:var(--s4); grid-template-columns:minmax(0,1fr)}
   .card{
     display:flex; flex-direction:column;
     /* The stripe is the card's state, read from across the room: the same
